@@ -136,6 +136,35 @@ def get_report(user_id, start_date, end_date, currency=None):
     conn.close()
     return rows
 
+def get_bank_slips_summary(user_id, start_date=None, end_date=None):
+    """
+    បូកសរុបប្រតិបត្តិការពីបង្កាន់ដៃធនាគារ (Bank Payslip) ទាំងអស់
+    បែងចែកតាមធនាគារ និងរូបិយប័ណ្ណ (USD និង KHR)
+    """
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+    query = """
+        SELECT category, COALESCE(currency, 'USD') as cur, type, SUM(amount), COUNT(id)
+        FROM transactions
+        WHERE user_id = ? AND (
+            category LIKE '%Bank%' OR category LIKE '%ABA%' OR category LIKE '%ACLEDA%' 
+            OR category LIKE '%Wing%' OR category LIKE '%Canadia%' OR category LIKE '%Bakong%' 
+            OR category LIKE '%KHQR%' OR category LIKE '%Sathapana%' OR category LIKE '%Chip Mong%'
+            OR category LIKE '%TrueMoney%' OR category = 'ធនាគារ'
+            OR description LIKE '%បង្កាន់ដៃ%' OR description LIKE '%វិក្កយបត្រ%'
+            OR description LIKE '%slip%'
+        )
+    """
+    params = [user_id]
+    if start_date and end_date:
+        query += " AND date BETWEEN ? AND ?"
+        params.extend([start_date, end_date])
+    query += " GROUP BY category, cur, type ORDER BY category ASC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully with multi-currency support.")

@@ -133,6 +133,41 @@ def extract_bank_slip_info(image_bytes):
     except Exception as e:
         return "ធនាគារ", "expense", None, "USD", str(e), str(e)
 
+# ----------------- ជំនួយការ parse កាលបរិច្ឆេទ -----------------
+def parse_date_argument(date_str):
+    if not date_str:
+        return None
+    date_str = date_str.strip()
+    m1 = re.match(r"^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$", date_str)
+    if m1:
+        y, m, d = m1.groups()
+        return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+    m2 = re.match(r"^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$", date_str)
+    if m2:
+        d, m, y = m2.groups()
+        return f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+    return None
+
+def get_date_range_and_title(data_key):
+    now = datetime.now()
+    if data_key.startswith("custom_"):
+        parts = data_key.replace("custom_", "").split("_")
+        if len(parts) >= 2:
+            return parts[0], parts[1], f"កំណត់ថ្ងៃ ({parts[0]} ដល់ {parts[1]})"
+    if data_key == "rep_daily":
+        return now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំថ្ងៃ"
+    elif data_key == "rep_weekly":
+        return (now - timedelta(days=7)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំសប្ដាហ៍"
+    elif data_key == "rep_monthly":
+        return now.strftime("%Y-%m-01"), now.strftime("%Y-%m-%d"), "ប្រចាំខែនេះ"
+    elif data_key == "rep_quarterly":
+        return (now - timedelta(days=90)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំត្រីមាស (៩០ ថ្ងៃ)"
+    elif data_key == "rep_semiannual":
+        return (now - timedelta(days=180)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំឆមាស (១៨០ ថ្ងៃ)"
+    elif data_key == "rep_yearly":
+        return now.strftime("%Y-01-01"), now.strftime("%Y-%m-%d"), "ប្រចាំឆ្នាំនេះ"
+    return None, None, None
+
 # ----------------- Command Handlers -----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -143,17 +178,18 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "សូមស្វាគមន៍មកកាន់ប្រព័ន្ធគ្រប់គ្រងហិរញ្ញវត្ថុឆ្លាតវៃ (បែងចែក $ និង ៛)។\n\n"
         "💵 **របៀបកត់ត្រាដោយដៃ៖**\n"
         "• ដុល្លារ ($)៖\n"
-        "  `+ 500$ ប្រាក់ខែ ទទួលប្រាក់ខែ` ឬ `+ 500 ប្រាក់ខែ`\n"
-        "  `- 15$ ម្ហូប បាយថ្ងៃត្រង់` ឬ `- 15 ម្ហូប`\n"
+        "  `+ 500$ ប្រាក់ខែ ទទួលប្រាក់ខែ` (ឬ `+ 500 ប្រាក់ខែ`)\n"
+        "  `- 15$ ម្ហូប បាយថ្ងៃត្រង់`\n"
         "• រៀល (៛)៖\n"
         "  `+ 2000000៛ ប្រាក់ខែ ទទួលប្រាក់ខែ`\n"
         "  `- 60000៛ ម្ហូប បាយថ្ងៃត្រង់`\n\n"
-        "🧾 **ស្កេនបង្កាន់ដៃធនាគារ៖**\n"
+        "🧾 **ស្កេនបង្កាន់ដៃធនាគារ (Bank Payslip)៖**\n"
         "• ផ្ញើរូបភាពបង្កាន់ដៃ (ABA, ACLEDA, Wing, Canadia, Bakong...) ចូលទីនេះ ប្រព័ន្ធនឹងស្រង់ទឹកប្រាក់ ធនាគារ និងរូបិយប័ណ្ណ ($/៛) ដោយស្វ័យប្រវត្តិ!\n\n"
         "📊 **របាយការណ៍ & ក្រាហ្វិក៖**\n"
-        "• /report : មើលរបាយការណ៍សង្ខេបបែងចែក $ និង ៛\n"
-        "• /chart : មើលក្រាហ្វិកវិភាគចំណូល-ចំណាយ\n"
-        "• /edit [ID] [ចំនួន] [ផ្នែក] [បរិយាយ] : កែប្រែទិន្នន័យ\n"
+        "• /report : របាយការណ៍ទូទៅ (ឬ `/report 2026-09-01 2026-09-25`)\n"
+        "• /chart : ក្រាហ្វិកវិភាគ (ឬ `/chart 2026-09-01 2026-09-25`)\n"
+        "• /bank : បូកសរុបបង្កាន់ដៃគ្រប់ធនាគារ (ឬ `/bank 2026-09-01 2026-09-25`)\n"
+        "• /edit [ID] [ចំនួន$ ឬ ៛] [ផ្នែក] [បរិយាយ] : កែប្រែទិន្នន័យ\n"
         "• /delete [ID] : លុបទិន្នន័យ"
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
@@ -209,7 +245,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     bank_name, trans_type, amount, currency, desc, raw_text = extract_bank_slip_info(image_bytes)
     
     if amount:
-        trans_id = db.add_transaction(user_id, trans_type, amount, bank_name, desc, currency=currency)
+        desc_tagged = f"[បង្កាន់ដៃ] {desc}" if not desc.startswith("[បង្កាន់ដៃ]") else desc
+        trans_id = db.add_transaction(user_id, trans_type, amount, bank_name, desc_tagged, currency=currency)
         type_emoji = " ទទួលប្រាក់ (ចំណូល)" if trans_type == "income" else " ទូទាត់/ផ្ទេរប្រាក់ (ចំណាយ)"
         amt_display = f"${amount:,.2f}" if currency == "USD" else f"{amount:,.0f} ៛"
         
@@ -231,23 +268,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "• រៀល: `- 60000៛ ធនាគារ ផ្ទេរប្រាក់`"
         )
 
-# ----------------- មុខងារគណនាកាលបរិច្ឆេទ & បង្កើត Chart -----------------
-def get_date_range_and_title(data_key):
-    now = datetime.now()
-    if data_key == "rep_daily":
-        return now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំថ្ងៃ"
-    elif data_key == "rep_weekly":
-        return (now - timedelta(days=7)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំសប្ដាហ៍"
-    elif data_key == "rep_monthly":
-        return now.strftime("%Y-%m-01"), now.strftime("%Y-%m-%d"), "ប្រចាំខែនេះ"
-    elif data_key == "rep_quarterly":
-        return (now - timedelta(days=90)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំត្រីមាស (៩០ ថ្ងៃ)"
-    elif data_key == "rep_semiannual":
-        return (now - timedelta(days=180)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំឆមាស (១៨០ ថ្ងៃ)"
-    elif data_key == "rep_yearly":
-        return now.strftime("%Y-01-01"), now.strftime("%Y-%m-%d"), "ប្រចាំឆ្នាំនេះ"
-    return None, None, None
-
+# ----------------- បង្កើត Chart -----------------
 def generate_finance_chart(records, title, start_date, end_date, currency_filter=None):
     if currency_filter:
         filtered = [r for r in records if r[2] == currency_filter]
@@ -260,7 +281,7 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
     currencies = list(dict.fromkeys(r[2] for r in filtered))
     donut_colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F7B801', '#9B5DE5', '#00BBF9', '#00F5D4']
 
-    # ករណីមានរូបិយប័ណ្ណតែមួយ (Single Currency: USD ឬ KHR)
+    # Single Currency
     if len(currencies) == 1:
         cur = currencies[0]
         cur_recs = filtered
@@ -280,7 +301,6 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
         ax1 = fig.add_subplot(1, 2, 1)
         ax2 = fig.add_subplot(1, 2, 2)
 
-        # Bar Chart
         categories = ['ចំណូល (Income)', 'ចំណាយ (Expense)']
         amounts = [inc, exp]
         colors = ['#2ECC71', '#E74C3C']
@@ -304,7 +324,6 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
                          ha='center', va='bottom',
                          color='#FFFFFF', fontsize=10, fontweight='bold')
 
-        # Donut Chart
         ax2.set_facecolor('#1E1E2E')
         breakdown_title = f'ចំណាត់ថ្នាក់ចំណាយ ({cur})' if exp > 0 else f'ចំណាត់ថ្នាក់ចំណូល ({cur})'
         ax2.set_title(breakdown_title, color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
@@ -341,7 +360,7 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
         return buf
 
     else:
-        # ករណីមានទាំងពីររូបិយប័ណ្ណ (Both USD & KHR: 2x2 Grid)
+        # Both USD & KHR (2x2 Grid)
         fig, axes = plt.subplots(2, 2, figsize=(11, 8), dpi=150)
         fig.patch.set_facecolor('#1E1E2E')
 
@@ -359,7 +378,6 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
             ax_bar = axes[row_idx, 0]
             ax_pie = axes[row_idx, 1]
 
-            # Bar Chart
             bars = ax_bar.bar(['ចំណូល', 'ចំណាយ'], [inc, exp], color=['#2ECC71', '#E74C3C'], width=0.45, edgecolor='#FFFFFF', linewidth=0.5)
             ax_bar.set_facecolor('#2A2B3D')
             ax_bar.set_title(f'ចំណូល vs ចំណាយ ({cur})', color='#FFFFFF', fontsize=11, fontweight='bold')
@@ -379,7 +397,6 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
                                 ha='center', va='bottom',
                                 color='#FFFFFF', fontsize=9, fontweight='bold')
 
-            # Donut Chart
             ax_pie.set_facecolor('#1E1E2E')
             ax_pie.set_title(f'ចំណាត់ថ្នាក់ ({cur})', color='#FFFFFF', fontsize=11, fontweight='bold')
 
@@ -414,31 +431,8 @@ def generate_finance_chart(records, title, start_date, end_date, currency_filter
         buf.seek(0)
         return buf
 
-# ----------------- របាយការណ៍បែងចែកពេលវេលា & រូបិយប័ណ្ណ -----------------
-async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    keyboard = [
-        [InlineKeyboardButton("📅 ប្រចាំថ្ងៃ", callback_data="rep_daily"),
-         InlineKeyboardButton("📅 ប្រចាំសប្ដាហ៍", callback_data="rep_weekly")],
-        [InlineKeyboardButton("📅 ប្រចាំខែ", callback_data="rep_monthly"),
-         InlineKeyboardButton("📅 ប្រចាំត្រីមាស", callback_data="rep_quarterly")],
-        [InlineKeyboardButton("📅 ប្រចាំឆមាស", callback_data="rep_semiannual"),
-         InlineKeyboardButton("📅 ប្រចាំឆ្នាំ", callback_data="rep_yearly")]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text("សូមជ្រើសរើសចន្លោះពេលដើម្បីមើលរបាយការណ៍៖", reply_markup=reply_markup)
-
-async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    
-    data = query.data
-    user_id = query.from_user.id
-    start_date, end_date, title = get_date_range_and_title(data)
-    if not start_date:
-        return
-
-    records = db.get_report(user_id, start_date, end_date)
-    
+# ----------------- ទម្រង់របាយការណ៍សង្ខេប -----------------
+def build_report_text_and_keyboard(records, start_date, end_date, title, data_tag):
     usd_income = 0.0
     usd_expense = 0.0
     usd_breakdown = []
@@ -476,7 +470,6 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not has_any:
         msg_parts.append("មិនមានទិន្នន័យក្នុងចន្លោះពេលនេះឡើយ។")
     else:
-        # បង្ហាញផ្នែកដុល្លារ
         if usd_income > 0 or usd_expense > 0 or not khr_breakdown:
             usd_text = "\n".join(usd_breakdown) if usd_breakdown else "  (គ្មានប្រតិបត្តិការ)"
             msg_parts.extend([
@@ -488,7 +481,6 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "-----------------------------"
             ])
             
-        # បង្ហាញផ្នែករៀល
         if khr_income > 0 or khr_expense > 0:
             khr_text = "\n".join(khr_breakdown) if khr_breakdown else "  (គ្មានប្រតិបត្តិការ)"
             msg_parts.extend([
@@ -502,7 +494,6 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     msg = "\n".join(msg_parts)
     
-    # ប៊ូតុងមើល Chart
     keyboard = []
     if has_any:
         has_usd = any(r[2] == 'USD' for r in records)
@@ -510,27 +501,267 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if has_usd and has_khr:
             keyboard.append([
-                InlineKeyboardButton("📊 Chart រួម ($ & ៛)", callback_data=f"chart_{data}_ALL"),
-                InlineKeyboardButton("💵 Chart ($)", callback_data=f"chart_{data}_USD"),
-                InlineKeyboardButton("🇰🇭 Chart (៛)", callback_data=f"chart_{data}_KHR")
+                InlineKeyboardButton("📊 Chart រួម ($ & ៛)", callback_data=f"chart_{data_tag}_ALL"),
+                InlineKeyboardButton("💵 Chart ($)", callback_data=f"chart_{data_tag}_USD"),
+                InlineKeyboardButton("🇰🇭 Chart (៛)", callback_data=f"chart_{data_tag}_KHR")
             ])
         elif has_khr:
-            keyboard.append([InlineKeyboardButton("🇰🇭 បង្ហាញក្រាហ្វិក (Chart ៛)", callback_data=f"chart_{data}_KHR")])
+            keyboard.append([InlineKeyboardButton("🇰🇭 បង្ហាញក្រាហ្វិក (Chart ៛)", callback_data=f"chart_{data_tag}_KHR")])
         else:
-            keyboard.append([InlineKeyboardButton("💵 បង្ហាញក្រាហ្វិក (Chart $)", callback_data=f"chart_{data}_USD")])
+            keyboard.append([InlineKeyboardButton("💵 បង្ហាញក្រាហ្វិក (Chart $)", callback_data=f"chart_{data_tag}_USD")])
             
     reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+    return msg, reply_markup
+
+# ----------------- របាយការណ៍បែងចែកពេលវេលា & រូបិយប័ណ្ណ -----------------
+async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not db.is_registered(user_id):
+        await update.message.reply_text("សូមចុះឈ្មោះជាមុនដោយវាយ /start")
+        return
+
+    # ករណី User បញ្ចូល Custom Date: /report 2026-09-01 2026-09-25
+    if context.args:
+        start_date = None
+        end_date = None
+        if len(context.args) >= 2:
+            start_date = parse_date_argument(context.args[0])
+            end_date = parse_date_argument(context.args[1])
+        elif len(context.args) == 1:
+            start_date = end_date = parse_date_argument(context.args[0])
+            
+        if start_date and end_date:
+            if start_date > end_date:
+                start_date, end_date = end_date, start_date
+            title = f"{start_date} ដល់ {end_date}" if start_date != end_date else start_date
+            records = db.get_report(user_id, start_date, end_date)
+            msg, reply_markup = build_report_text_and_keyboard(records, start_date, end_date, title, f"custom_{start_date}_{end_date}")
+            await update.message.reply_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
+            return
+        else:
+            await update.message.reply_text(
+                "⚠️ កាលបរិច្ឆេទមិនត្រឹមត្រូវ! គំរូ:\n"
+                "• `/report 2026-09-01 2026-09-25`\n"
+                "• `/report 01/09/2026 25/09/2026`\n"
+                "• `/report 2026-09-25`",
+                parse_mode="Markdown"
+            )
+            return
+
+    keyboard = [
+        [InlineKeyboardButton("📅 ប្រចាំថ្ងៃ", callback_data="rep_daily"),
+         InlineKeyboardButton("📅 ប្រចាំសប្ដាហ៍", callback_data="rep_weekly")],
+        [InlineKeyboardButton("📅 ប្រចាំខែ", callback_data="rep_monthly"),
+         InlineKeyboardButton("📅 ប្រចាំត្រីមាស", callback_data="rep_quarterly")],
+        [InlineKeyboardButton("📅 ប្រចាំឆមាស", callback_data="rep_semiannual"),
+         InlineKeyboardButton("📅 ប្រចាំឆ្នាំ", callback_data="rep_yearly")],
+        [InlineKeyboardButton("🗓 កំណត់ថ្ងៃតាមចិត្ត (Custom Date)", callback_data="rep_custom_hint")],
+        [InlineKeyboardButton("🏦 សរុបបង្កាន់ដៃធនាគារ (Bank Slips)", callback_data="rep_bank_slips")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("សូមជ្រើសរើសចន្លោះពេលដើម្បីមើលរបាយការណ៍៖", reply_markup=reply_markup)
+
+async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    
+    data = query.data
+    user_id = query.from_user.id
+    
+    # បង្ហាញការណែនាំ Custom Date
+    if data == "rep_custom_hint":
+        hint_text = (
+            "🗓 **របៀបមើលរបាយការណ៍ និង Chart តាមថ្ងៃកំណត់ (Custom Date)៖**\n\n"
+            "🔹 **មើលរបាយការណ៍សង្ខេប៖**\n"
+            "• `/report [ថ្ងៃចាប់ផ្ដើម] [ថ្ងៃបញ្ចប់]`\n"
+            "  ឧទាហរណ៍: `/report 2026-09-01 2026-09-25`\n"
+            "  ឬ: `/report 01/09/2026 25/09/2026`\n"
+            "• មើលតែមួយថ្ងៃ: `/report 2026-09-25`\n\n"
+            "🔹 **មើលក្រាហ្វិក (Chart)៖**\n"
+            "• `/chart [ថ្ងៃចាប់ផ្ដើម] [ថ្ងៃបញ្ចប់]`\n"
+            "  ឧទាហរណ៍: `/chart 2026-09-01 2026-09-25`\n\n"
+            "🔹 **មើលបូកសរុបបង្កាន់ដៃធនាគារ៖**\n"
+            "• `/bank [ថ្ងៃចាប់ផ្ដើម] [ថ្ងៃបញ្ចប់]`\n"
+            "  ឧទាហរណ៍: `/bank 2026-09-01 2026-09-25`\n"
+            "• ឬវាយ `/bank` ដើម្បីមើលសរុបទាំងអស់"
+        )
+        await query.message.reply_text(hint_text, parse_mode="Markdown")
+        return
+
+    # សរុបបង្កាន់ដៃធនាគារ
+    if data == "rep_bank_slips":
+        records = db.get_bank_slips_summary(user_id)
+        text_msg = format_bank_slips_report(records, "គ្រប់ពេលវេលា")
+        keyboard = []
+        if records:
+            keyboard.append([InlineKeyboardButton("📊 មើល Chart បង្កាន់ដៃធនាគារ", callback_data="chart_bank_all")])
+        reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+        await query.message.reply_text(text_msg, parse_mode="Markdown", reply_markup=reply_markup)
+        return
+
+    start_date, end_date, title = get_date_range_and_title(data)
+    if not start_date:
+        return
+
+    records = db.get_report(user_id, start_date, end_date)
+    msg, reply_markup = build_report_text_and_keyboard(records, start_date, end_date, title, data)
     await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
+
+# ----------------- បូកសរុបបង្កាន់ដៃគ្រប់ធនាគារ (/bank) -----------------
+def format_bank_slips_report(records, title):
+    if not records:
+        return f"🏦 **បូកសរុបបង្កាន់ដៃគ្រប់ធនាគារ (Bank Payslip Summary)**\nចន្លោះពេល: `{title}`\n----------------------------------\nមិនមានទិន្នន័យបង្កាន់ដៃធនាគារឡើយ។"
+        
+    bank_data = {}
+    usd_income = 0.0
+    usd_expense = 0.0
+    khr_income = 0.0
+    khr_expense = 0.0
+    
+    for bank, cur, r_type, amt, count in records:
+        if bank not in bank_data:
+            bank_data[bank] = {"USD": {"income": 0.0, "expense": 0.0, "count": 0},
+                               "KHR": {"income": 0.0, "expense": 0.0, "count": 0}}
+        bank_data[bank][cur][r_type] += amt
+        bank_data[bank][cur]["count"] += count
+        
+        if cur == "USD":
+            if r_type == "income":
+                usd_income += amt
+            else:
+                usd_expense += amt
+        else:
+            if r_type == "income":
+                khr_income += amt
+            else:
+                khr_expense += amt
+
+    lines = [
+        f"🏦 **បូកសរុបបង្កាន់ដៃគ្រប់ធនាគារ (Bank Payslips)**",
+        f"ចន្លោះពេល: `{title}`",
+        "----------------------------------"
+    ]
+    
+    for bank, cur_dict in bank_data.items():
+        lines.append(f"🔹 **{bank}**:")
+        has_items = False
+        usd = cur_dict["USD"]
+        if usd["income"] > 0:
+            lines.append(f"  • ចំណូល: +${usd['income']:,.2f}")
+            has_items = True
+        if usd["expense"] > 0:
+            lines.append(f"  • ចំណាយ: -${usd['expense']:,.2f}")
+            has_items = True
+            
+        khr = cur_dict["KHR"]
+        if khr["income"] > 0:
+            lines.append(f"  • ចំណូល: +{khr['income']:,.0f} ៛")
+            has_items = True
+        if khr["expense"] > 0:
+            lines.append(f"  • ចំណាយ: -{khr['expense']:,.0f} ៛")
+            has_items = True
+            
+        total_slips = usd["count"] + khr["count"]
+        lines.append(f"  (សរុប {total_slips} សន្លឹក)")
+        lines.append("")
+
+    usd_bal = usd_income - usd_expense
+    khr_bal = khr_income - khr_expense
+    
+    lines.extend([
+        "----------------------------------",
+        "💰 **សរុបរួមពីគ្រប់ធនាគារទាំងអស់**:",
+        "💵 **ដុល្លារ (USD)**:",
+        f"  • ចំណូល: +${usd_income:,.2f}",
+        f"  • ចំណាយ: -${usd_expense:,.2f}",
+        f"  • សមតុល្យ: **${usd_bal:,.2f}**",
+        "",
+        "🇰🇭 **រៀល (KHR)**:",
+        f"  • ចំណូល: +{khr_income:,.0f} ៛",
+        f"  • ចំណាយ: -{khr_expense:,.0f} ៛",
+        f"  • សមតុល្យ: **{khr_bal:,.0f} ៛**"
+    ])
+    
+    return "\n".join(lines)
+
+async def bank_slips_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not db.is_registered(user_id):
+        await update.message.reply_text("សូមចុះឈ្មោះជាមុនដោយវាយ /start")
+        return
+
+    start_date = None
+    end_date = None
+    title = "គ្រប់ពេលវេលា"
+    if len(context.args) >= 2:
+        sd = parse_date_argument(context.args[0])
+        ed = parse_date_argument(context.args[1])
+        if sd and ed:
+            start_date, end_date = (sd, ed) if sd <= ed else (ed, sd)
+            title = f"{start_date} ដល់ {end_date}"
+    elif len(context.args) == 1:
+        d = parse_date_argument(context.args[0])
+        if d:
+            start_date = end_date = d
+            title = start_date
+
+    records = db.get_bank_slips_summary(user_id, start_date, end_date)
+    text_msg = format_bank_slips_report(records, title)
+
+    keyboard = []
+    if records:
+        cb_val = f"chart_bank_{start_date}_{end_date}" if start_date and end_date else "chart_bank_all"
+        keyboard.append([InlineKeyboardButton("📊 មើល Chart បង្កាន់ដៃធនាគារ", callback_data=cb_val)])
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+    
+    await update.message.reply_text(text_msg, parse_mode="Markdown", reply_markup=reply_markup)
 
 # ----------------- បង្ហាញ Chart (ក្រាហ្វិក) -----------------
 async def chart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    if not db.is_registered(user_id):
+        await update.message.reply_text("សូមចុះឈ្មោះជាមុនដោយវាយ /start")
+        return
+
+    # ករណី Custom Date: /chart 2026-09-01 2026-09-25
+    if context.args:
+        start_date = None
+        end_date = None
+        if len(context.args) >= 2:
+            start_date = parse_date_argument(context.args[0])
+            end_date = parse_date_argument(context.args[1])
+        elif len(context.args) == 1:
+            start_date = end_date = parse_date_argument(context.args[0])
+            
+        if start_date and end_date:
+            if start_date > end_date:
+                start_date, end_date = end_date, start_date
+            title = f"{start_date} ដល់ {end_date}" if start_date != end_date else start_date
+            records = db.get_report(user_id, start_date, end_date)
+            chart_buf = generate_finance_chart(records, title, start_date, end_date)
+            if chart_buf:
+                await update.message.reply_photo(photo=chart_buf, caption=f"📊 **ក្រាហ្វិករបាយការណ៍ហិរញ្ញវត្ថុ**\nចន្លោះ: `{start_date}` ដល់ `{end_date}`", parse_mode="Markdown")
+            else:
+                await update.message.reply_text(f"⚠️ មិនមានទិន្នន័យសម្រាប់បង្កើតក្រាហ្វិក ({start_date} ដល់ {end_date}) ឡើយ។")
+            return
+        else:
+            await update.message.reply_text(
+                "⚠️ កាលបរិច្ឆេទមិនត្រឹមត្រូវ! គំរូ:\n"
+                "• `/chart 2026-09-01 2026-09-25`\n"
+                "• `/chart 01/09/2026 25/09/2026`",
+                parse_mode="Markdown"
+            )
+            return
+
     keyboard = [
         [InlineKeyboardButton("📊 ប្រចាំថ្ងៃ", callback_data="chart_rep_daily_ALL"),
          InlineKeyboardButton("📊 ប្រចាំសប្ដាហ៍", callback_data="chart_rep_weekly_ALL")],
         [InlineKeyboardButton("📊 ប្រចាំខែ", callback_data="chart_rep_monthly_ALL"),
          InlineKeyboardButton("📊 ប្រចាំត្រីមាស", callback_data="chart_rep_quarterly_ALL")],
         [InlineKeyboardButton("📊 ប្រចាំឆមាស", callback_data="chart_rep_semiannual_ALL"),
-         InlineKeyboardButton("📊 ប្រចាំឆ្នាំ", callback_data="chart_rep_yearly_ALL")]
+         InlineKeyboardButton("📊 ប្រចាំឆ្នាំ", callback_data="chart_rep_yearly_ALL")],
+        [InlineKeyboardButton("🗓 កំណត់ថ្ងៃតាមចិត្ត (Custom Date)", callback_data="rep_custom_hint")],
+        [InlineKeyboardButton("🏦 ក្រាហ្វិកបង្កាន់ដៃធនាគារ", callback_data="chart_bank_all")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("📊 សូមជ្រើសរើសចន្លោះពេលដើម្បីបង្កើត Chart ក្រាហ្វិក៖", reply_markup=reply_markup)
@@ -539,11 +770,33 @@ async def chart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    # Callback data format: chart_rep_monthly_ALL, chart_rep_monthly_USD, etc.
     raw_data = query.data.replace("chart_", "")
+    user_id = query.from_user.id
+
+    # ករណី Chart បង្កាន់ដៃធនាគារ
+    if raw_data.startswith("bank_"):
+        bank_part = raw_data.replace("bank_", "")
+        if bank_part == "all":
+            start_date, end_date, title = None, None, "គ្រប់ពេលវេលា"
+        else:
+            p = bank_part.split("_")
+            start_date, end_date = p[0], p[1]
+            title = f"{start_date} ដល់ {end_date}"
+            
+        slips = db.get_bank_slips_summary(user_id, start_date, end_date)
+        # បំប្លែងទៅទម្រង់ records: type, category, cur, amount, count
+        chart_records = [(r[2], r[0], r[1], r[3], r[4]) for r in slips]
+        s_date_display = start_date if start_date else "ដើមដំបូង"
+        e_date_display = end_date if end_date else "បច្ចុប្បន្ន"
+        chart_buf = generate_finance_chart(chart_records, f"បង្កាន់ដៃធនាគារ ({title})", s_date_display, e_date_display)
+        if chart_buf:
+            caption = f"🏦 **ក្រាហ្វិកបូកសរុបបង្កាន់ដៃធនាគារ ({title})**"
+            await query.message.reply_photo(photo=chart_buf, caption=caption, parse_mode="Markdown")
+        else:
+            await query.message.reply_text(f"⚠️ មិនមានទិន្នន័យបង្កាន់ដៃធនាគារសម្រាប់បង្កើតក្រាហ្វិកឡើយ។")
+        return
+
     parts = raw_data.split("_")
-    
-    # Reconstruct data_key (e.g. rep_monthly) and currency filter
     if len(parts) >= 3 and parts[-1] in ("ALL", "USD", "KHR"):
         cur_filter = None if parts[-1] == "ALL" else parts[-1]
         data_key = "_".join(parts[:-1])
@@ -551,7 +804,6 @@ async def chart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         cur_filter = None
         data_key = raw_data
 
-    user_id = query.from_user.id
     start_date, end_date, title = get_date_range_and_title(data_key)
     if not start_date:
         return
@@ -660,6 +912,8 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("report", report_command))
     app.add_handler(CommandHandler("chart", chart_command))
+    app.add_handler(CommandHandler("bank", bank_slips_command))
+    app.add_handler(CommandHandler("slips", bank_slips_command))
     app.add_handler(CommandHandler("edit", edit_record))
     app.add_handler(CommandHandler("delete", delete_record))
     
@@ -668,7 +922,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_record))
     
-    print("Bot is running with multi-currency ($/៛) & bank slip reader...")
+    print("Bot is running with Bank Payslip aggregator & Custom Date support...")
     app.run_polling()
 
 if __name__ == "__main__":
