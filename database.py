@@ -17,13 +17,14 @@ def init_db():
         )
     """)
     
-    # តារាងកត់ត្រាចំណូល-ចំណាយ
+    # តារាងកត់ត្រាចំណូល-ចំណាយ (Currency: USD ឬ KHR)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             user_id INTEGER,
             type TEXT CHECK(type IN ('income', 'expense')),
             amount REAL,
+            currency TEXT DEFAULT 'USD' CHECK(currency IN ('USD', 'KHR')),
             category TEXT,
             description TEXT,
             date DATE,
@@ -31,6 +32,13 @@ def init_db():
             FOREIGN KEY (user_id) REFERENCES users(user_id)
         )
     """)
+    
+    # Migration: បន្ថែម Column currency ប្រសិនបើជា Database ចាស់
+    try:
+        cursor.execute("ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'USD'")
+    except sqlite3.OperationalError:
+        pass  # Column មានរួចហើយ
+        
     conn.commit()
     conn.close()
 
@@ -50,21 +58,23 @@ def is_registered(user_id):
     conn.close()
     return res is not None
 
-def add_transaction(user_id, trans_type, amount, category, description, date_str=None):
+def add_transaction(user_id, trans_type, amount, category, description, currency="USD", date_str=None):
     if not date_str:
         date_str = datetime.now().strftime("%Y-%m-%d")
+    currency = "KHR" if currency and currency.upper() in ("KHR", "៛", "RIEL") else "USD"
+    
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO transactions (user_id, type, amount, category, description, date)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (user_id, trans_type, amount, category, description, date_str))
+        INSERT INTO transactions (user_id, type, amount, currency, category, description, date)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (user_id, trans_type, amount, currency, category, description, date_str))
     trans_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return trans_id
 
-def update_transaction(trans_id, user_id, amount=None, category=None, description=None):
+def update_transaction(trans_id, user_id, amount=None, currency=None, category=None, description=None):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
     
@@ -73,6 +83,10 @@ def update_transaction(trans_id, user_id, amount=None, category=None, descriptio
     if amount is not None:
         updates.append("amount = ?")
         params.append(amount)
+    if currency is not None:
+        cur_val = "KHR" if currency.upper() in ("KHR", "៛", "RIEL") else "USD"
+        updates.append("currency = ?")
+        params.append(cur_val)
     if category is not None:
         updates.append("category = ?")
         params.append(category)
@@ -100,19 +114,28 @@ def delete_transaction(trans_id, user_id):
     conn.close()
     return deleted
 
-def get_report(user_id, start_date, end_date):
+def get_report(user_id, start_date, end_date, currency=None):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT type, category, SUM(amount), COUNT(id)
-        FROM transactions
-        WHERE user_id = ? AND date BETWEEN ? AND ?
-        GROUP BY type, category
-    """, (user_id, start_date, end_date))
+    if currency:
+        cur_val = "KHR" if currency.upper() in ("KHR", "៛", "RIEL") else "USD"
+        cursor.execute("""
+            SELECT type, category, currency, SUM(amount), COUNT(id)
+            FROM transactions
+            WHERE user_id = ? AND date BETWEEN ? AND ? AND (currency = ? OR (currency IS NULL AND ? = 'USD'))
+            GROUP BY type, category, currency
+        """, (user_id, start_date, end_date, cur_val, cur_val))
+    else:
+        cursor.execute("""
+            SELECT type, category, COALESCE(currency, 'USD') as cur, SUM(amount), COUNT(id)
+            FROM transactions
+            WHERE user_id = ? AND date BETWEEN ? AND ?
+            GROUP BY type, category, cur
+        """, (user_id, start_date, end_date))
     rows = cursor.fetchall()
     conn.close()
     return rows
 
 if __name__ == "__main__":
     init_db()
-    print("Database initialized successfully.")
+    print("Database initialized successfully with multi-currency support.")

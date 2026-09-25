@@ -38,32 +38,100 @@ load_dotenv()
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# ករណី Windows ត្រូវបើក comment ខាងក្រោមដើម្បីបញ្ជាក់ path ទៅ tesseract.exe
+# ករណី Windows ត្រូវបើក comment ខាងក្រោមដើម្បីបញ្ជាក់ path ទៅ tesseract.exe (បើចាំបាច់)
 # pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-# ----------------- OCR ស្រង់ទឹកប្រាក់ពីរូបភាព -----------------
-def extract_amount_from_image(image_bytes):
+# ----------------- អានបង្កាន់ដៃធនាគារ (Bank Payslip / Transaction Slip) -----------------
+def extract_bank_slip_info(image_bytes):
+    """
+    អាន Bank Payslip / Transaction Slip (បង្កាន់ដៃធនាគារ ABA, ACLEDA, Wing, Canadia, Bakong...)
+    ទាញយក: Bank Name, Transaction Type (income/expense), Amount, Currency (USD/KHR), Description
+    """
     try:
         img = Image.open(BytesIO(image_bytes))
+        if img.mode != "RGB":
+            img = img.convert("RGB")
+            
         text = pytesseract.image_to_string(img)
         
-        # ស្វែងរកលេខទឹកប្រាក់ (ឧ. $120.50, 50,000 KHR, 25.00 USD)
-        usd_pattern = r"\$\s?([0-9]+(?:,[0-9]{3})*(?:\.[0-9]{1,2})?)"
-        khr_pattern = r"([0-9]+(?:,[0-9]{3})*)\s?(?:KHR|៛)"
+        # ១. ស្វែងរកឈ្មោះធនាគារ (Bank Name)
+        bank_name = "ធនាគារ"
+        if re.search(r"\baba\b|advanced bank", text, re.I):
+            bank_name = "ABA Bank"
+        elif re.search(r"\bacleda\b|toanchet|អេស៊ីលីដា", text, re.I):
+            bank_name = "ACLEDA Bank"
+        elif re.search(r"\bwing\b|wingmoney", text, re.I):
+            bank_name = "Wing Bank"
+        elif re.search(r"\bcanadia\b|កាណាឌីយ៉ា", text, re.I):
+            bank_name = "Canadia Bank"
+        elif re.search(r"bakong|khqr|បាគង", text, re.I):
+            bank_name = "Bakong / KHQR"
+        elif re.search(r"truemoney", text, re.I):
+            bank_name = "TrueMoney"
+        elif re.search(r"sathapana", text, re.I):
+            bank_name = "Sathapana Bank"
+        elif re.search(r"chip mong", text, re.I):
+            bank_name = "Chip Mong Bank"
+
+        # ២. ស្វែងរកប្រភេទប្រតិបត្តិការ (Income vs Expense)
+        trans_type = "expense"
+        has_income_keywords = re.search(r"received from|from account|sender:|ដាក់ប្រាក់|ទទួលពី|cash in|credit", text, re.I)
+        has_expense_keywords = re.search(r"paid to|transfer to|to account|merchant|អ្នកទទួល|payment to|debit", text, re.I)
+        if has_income_keywords and not has_expense_keywords:
+            trans_type = "income"
+
+        # ៣. ស្វែងរកចំនួនទឹកប្រាក់ និងរូបិយប័ណ្ណ ($ ឬ ៛)
+        amount = None
+        currency = "USD"
+
+        # ស្វែងរក KHR (៛)
+        khr_match = re.search(r"([0-9]{1,3}(?:,[0-9]{3})*|[0-9]+(?:\.[0-9]+)?)\s*(?:KHR|៛|Riel|រៀល)", text, re.I)
+        if not khr_match:
+            khr_match = re.search(r"(?:KHR|៛)\s*([0-9]{1,3}(?:,[0-9]{3})*|[0-9]+(?:\.[0-9]+)?)", text, re.I)
+
+        # ស្វែងរក USD ($)
+        usd_match = re.search(r"\$\s*([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)", text)
+        if not usd_match:
+            usd_match = re.search(r"([0-9]{1,3}(?:,[0-9]{3})*(?:\.[0-9]{1,2})?|[0-9]+(?:\.[0-9]{1,2})?)\s*(?:USD|\$)", text, re.I)
+
+        if khr_match and not usd_match:
+            amount = float(khr_match.group(1).replace(",", ""))
+            currency = "KHR"
+        elif usd_match:
+            amount = float(usd_match.group(1).replace(",", ""))
+            currency = "USD"
+        elif khr_match:
+            amount = float(khr_match.group(1).replace(",", ""))
+            currency = "KHR"
+        else:
+            # Fallback: រកមើលលេខទឹកប្រាក់ក្បែរពាក្យ Amount ឬ Total
+            amt_fallback = re.search(r"(?:amount|total|ទឹកប្រាក់|ចំនួន)\s*[:\-]?\s*([0-9,.]+)", text, re.I)
+            if amt_fallback:
+                raw_amt = float(amt_fallback.group(1).replace(",", ""))
+                if raw_amt >= 500 and "." not in amt_fallback.group(1):
+                    amount = raw_amt
+                    currency = "KHR"
+                else:
+                    amount = raw_amt
+                    currency = "USD"
+
+        # ៤. ស្រង់អ្នកទទួល (Beneficiary) ឬ Remark
+        desc = ""
+        to_match = re.search(r"(?:to account|paid to|transfer to|to|merchant|អ្នកទទួល)\s*[:\-]?\s*([^\n\r]+)", text, re.I)
+        if to_match:
+            desc = to_match.group(1).strip()
         
-        usd_match = re.search(usd_pattern, text)
-        if usd_match:
-            amount_str = usd_match.group(1).replace(",", "")
-            return float(amount_str), "USD"
-            
-        khr_match = re.search(khr_pattern, text, re.IGNORECASE)
-        if khr_match:
-            amount_str = khr_match.group(1).replace(",", "")
-            return float(amount_str), "KHR"
-            
-        return None, text
+        remark_match = re.search(r"(?:remark|note|description|purpose|កំណត់សម្គាល់|មូលហេតុ)\s*[:\-]?\s*([^\n\r]+)", text, re.I)
+        if remark_match:
+            rem = remark_match.group(1).strip()
+            desc = f"{desc} ({rem})" if desc else rem
+
+        if not desc:
+            desc = f"បង្កាន់ដៃ {bank_name}"
+
+        return bank_name, trans_type, amount, currency, desc, text
     except Exception as e:
-        return None, str(e)
+        return "ធនាគារ", "expense", None, "USD", str(e), str(e)
 
 # ----------------- Command Handlers -----------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -72,16 +140,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     welcome_msg = (
         f"ជំរាបសួរ {user.full_name}!\n"
-        "សូមស្វាគមន៍មកកាន់ប្រព័ន្ធគ្រប់គ្រងហិរញ្ញវត្ថុឆ្លាតវៃ។\n\n"
-        " របៀបកត់ត្រាដោយដៃ៖\n"
-        "• ចំណូល: `+ ចំនួន ផ្នែក ការពិពណ៌នា`\n"
-        "  ឧទាហរណ៍: `+ 500 ប្រាក់ខែ ទទួលប្រាក់ខែដើមខែ`\n"
-        "• ចំណាយ: `- ចំនួន ផ្នែក ការពិពណ៌នា`\n"
-        "  ឧទាហរណ៍: `- 15 ម្ហូបអាហារ ញ៉ាំបាយថ្ងៃត្រង់`\n\n"
-        " របៀបកត់ត្រាតាមវិក្កយបត្រ៖ ផ្ញើរូបភាពវិក្កយបត្រធនាគារចូលទីនេះ\n"
-        " របាយការណ៍សង្ខេប៖ វាយ /report\n"
-        " ក្រាហ្វិក (Chart)៖ វាយ /chart\n"
-        " កែប្រែ/លុប៖ វាយ /edit [ID] ឬ /delete [ID]"
+        "សូមស្វាគមន៍មកកាន់ប្រព័ន្ធគ្រប់គ្រងហិរញ្ញវត្ថុឆ្លាតវៃ (បែងចែក $ និង ៛)។\n\n"
+        "💵 **របៀបកត់ត្រាដោយដៃ៖**\n"
+        "• ដុល្លារ ($)៖\n"
+        "  `+ 500$ ប្រាក់ខែ ទទួលប្រាក់ខែ` ឬ `+ 500 ប្រាក់ខែ`\n"
+        "  `- 15$ ម្ហូប បាយថ្ងៃត្រង់` ឬ `- 15 ម្ហូប`\n"
+        "• រៀល (៛)៖\n"
+        "  `+ 2000000៛ ប្រាក់ខែ ទទួលប្រាក់ខែ`\n"
+        "  `- 60000៛ ម្ហូប បាយថ្ងៃត្រង់`\n\n"
+        "🧾 **ស្កេនបង្កាន់ដៃធនាគារ៖**\n"
+        "• ផ្ញើរូបភាពបង្កាន់ដៃ (ABA, ACLEDA, Wing, Canadia, Bakong...) ចូលទីនេះ ប្រព័ន្ធនឹងស្រង់ទឹកប្រាក់ ធនាគារ និងរូបិយប័ណ្ណ ($/៛) ដោយស្វ័យប្រវត្តិ!\n\n"
+        "📊 **របាយការណ៍ & ក្រាហ្វិក៖**\n"
+        "• /report : មើលរបាយការណ៍សង្ខេបបែងចែក $ និង ៛\n"
+        "• /chart : មើលក្រាហ្វិកវិភាគចំណូល-ចំណាយ\n"
+        "• /edit [ID] [ចំនួន] [ផ្នែក] [បរិយាយ] : កែប្រែទិន្នន័យ\n"
+        "• /delete [ID] : លុបទិន្នន័យ"
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
 
@@ -94,26 +167,36 @@ async def handle_text_record(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await update.message.reply_text("សូមចុះឈ្មោះជាមុនដោយវាយ /start")
         return
 
-    # ទម្រង់: + 100 Category Description ឬ - 100 Category Description
-    match = re.match(r"^([+-])\s*([0-9]+(?:\.[0-9]+)?)\s+([^\s]+)(?:\s+(.*))?$", text)
+    # ទម្រង់: + 100$ Category Description ឬ - 40000៛ Category Description
+    match = re.match(r"^([+-])\s*(\$|៛|USD|KHR|R)?\s*([0-9]+(?:,[0-9]{3})*(?:\.[0-9]+)?)\s*(\$|៛|USD|KHR|R)?\s+([^\s]+)(?:\s+(.*))?$", text, re.I)
     if match:
-        sign, amount_str, category, desc = match.groups()
-        amount = float(amount_str)
+        sign, cur_pre, amt_str, cur_post, category, desc = match.groups()
+        amount = float(amt_str.replace(",", ""))
         trans_type = "income" if sign == "+" else "expense"
-        desc = desc if desc else "គ្មានកំណត់សម្គាល់"
         
-        trans_id = db.add_transaction(user_id, trans_type, amount, category, desc)
-        emoji = " ទទួល" if trans_type == "income" else " ចំណាយ"
+        cur_tag = (cur_pre or cur_post or "").upper()
+        if cur_tag in ("៛", "KHR", "R"):
+            currency = "KHR"
+        else:
+            currency = "USD"
+            
+        desc = desc.strip() if desc else "គ្មានកំណត់សម្គាល់"
+        
+        trans_id = db.add_transaction(user_id, trans_type, amount, category, desc, currency=currency)
+        emoji = " ទទួល (ចំណូល)" if trans_type == "income" else " ចំណាយ"
+        cur_symbol = "$" if currency == "USD" else "៛"
+        amt_display = f"${amount:,.2f}" if currency == "USD" else f"{amount:,.0f} ៛"
         
         await update.message.reply_text(
-            f"✅ កត់ត្រាជោគជ័យ! (ID: {trans_id})\n"
+            f"✅ **កត់ត្រាជោគជ័យ!** (ID: {trans_id})\n"
             f"• ប្រភេទ: {emoji}\n"
-            f"• ទឹកប្រាក់: ${amount:,.2f}\n"
+            f"• រូបិយប័ណ្ណ: {currency} ({cur_symbol})\n"
+            f"• ទឹកប្រាក់: **{amt_display}**\n"
             f"• ផ្នែក: {category}\n"
             f"• បរិយាយ: {desc}"
         )
 
-# ----------------- អានរូបភាពវិក្កយបត្រ -----------------
+# ----------------- អានរូបភាពវិក្កយបត្រធនាគារ -----------------
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if not db.is_registered(user_id):
@@ -123,20 +206,30 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     photo = await update.message.photo[-1].get_file()
     image_bytes = await photo.download_as_bytearray()
     
-    amount, currency = extract_amount_from_image(image_bytes)
+    bank_name, trans_type, amount, currency, desc, raw_text = extract_bank_slip_info(image_bytes)
     
     if amount:
-        # កត់ត្រាជាចំណូល ឬចំណាយដោយស្វ័យប្រវត្តិ (លំនាំដើម: ធនាគារ)
-        trans_id = db.add_transaction(user_id, "expense", amount, "ធនាគារ", f"ស្កេនពីវិក្កយបត្រ ({currency})")
-        await update.message.reply_text(
-            f" ស្កេនជោគជ័យ! បានកត់ត្រាចូលបញ្ជី៖\n"
-            f"• លេខសម្គាល់: ID {trans_id}\n"
-            f"• ទឹកប្រាក់រកឃើញ: {amount:,.2f} {currency}\n"
-            f"• ផ្នែក: ធនាគារ\n\n"
-            f"(ប្រសិនបើជាចំណូល ឬចង់ប្ដូរប្រភេទ សូមប្រើ: `/edit {trans_id} [amount] [category] [desc]`)"
+        trans_id = db.add_transaction(user_id, trans_type, amount, bank_name, desc, currency=currency)
+        type_emoji = " ទទួលប្រាក់ (ចំណូល)" if trans_type == "income" else " ទូទាត់/ផ្ទេរប្រាក់ (ចំណាយ)"
+        amt_display = f"${amount:,.2f}" if currency == "USD" else f"{amount:,.0f} ៛"
+        
+        msg = (
+            f"🧾 **ស្កេនបង្កាន់ដៃធនាគារជោគជ័យ!** (ID: {trans_id})\n"
+            f"🏦 ធនាគារ: **{bank_name}**\n"
+            f"🔄 ប្រភេទ: **{type_emoji}**\n"
+            f"💰 ទឹកប្រាក់: **{amt_display}** ({currency})\n"
+            f"📂 ផ្នែក: {bank_name}\n"
+            f"📝 បរិយាយ: {desc}\n\n"
+            f"*(កែប្រែ: `/edit {trans_id} [ចំនួន] [ផ្នែក] [បរិយាយ]` ឬលុប: `/delete {trans_id}`)*"
         )
+        await update.message.reply_text(msg, parse_mode="Markdown")
     else:
-        await update.message.reply_text(" មិនអាចទាញយកទឹកប្រាក់ពីរូបភាពបានទេ។ សូមបញ្ចូលដោយដៃតាមទម្រង់: `- [ចំនួន] [ផ្នែក] [បរិយាយ]`")
+        await update.message.reply_text(
+            "⚠️ មិនអាចស្វែងរកទឹកប្រាក់ពីបង្កាន់ដៃនេះបានដោយស្វ័យប្រវត្តិទេ។\n"
+            "សូមបញ្ចូលដោយដៃតាមគំរូ៖\n"
+            "• ដុល្លារ: `- 15$ ធនាគារ ផ្ទេរប្រាក់`\n"
+            "• រៀល: `- 60000៛ ធនាគារ ផ្ទេរប្រាក់`"
+        )
 
 # ----------------- មុខងារគណនាកាលបរិច្ឆេទ & បង្កើត Chart -----------------
 def get_date_range_and_title(data_key):
@@ -155,97 +248,173 @@ def get_date_range_and_title(data_key):
         return now.strftime("%Y-01-01"), now.strftime("%Y-%m-%d"), "ប្រចាំឆ្នាំនេះ"
     return None, None, None
 
-def generate_finance_chart(records, title, start_date, end_date):
-    if not records:
+def generate_finance_chart(records, title, start_date, end_date, currency_filter=None):
+    if currency_filter:
+        filtered = [r for r in records if r[2] == currency_filter]
+    else:
+        filtered = records
+
+    if not filtered:
         return None
 
-    income_by_cat = {}
-    expense_by_cat = {}
-    total_income = 0.0
-    total_expense = 0.0
-
-    for r_type, cat, amt, count in records:
-        if r_type == 'income':
-            income_by_cat[cat] = income_by_cat.get(cat, 0.0) + amt
-            total_income += amt
-        else:
-            expense_by_cat[cat] = expense_by_cat.get(cat, 0.0) + amt
-            total_expense += amt
-
-    if total_income == 0 and total_expense == 0:
-        return None
-
-    # បង្កើត Figure រចនាប័ទ្ម Modern Dark Theme
-    fig = plt.figure(figsize=(10, 5), dpi=150)
-    fig.patch.set_facecolor('#1E1E2E')
-
-    ax1 = fig.add_subplot(1, 2, 1)
-    ax2 = fig.add_subplot(1, 2, 2)
-
-    # --- ១. Bar Chart: ចំណូល vs ចំណាយ ---
-    categories = ['ចំណូល (Income)', 'ចំណាយ (Expense)']
-    amounts = [total_income, total_expense]
-    colors = ['#2ECC71', '#E74C3C']
-
-    bars = ax1.bar(categories, amounts, color=colors, width=0.45, edgecolor='#FFFFFF', linewidth=0.5)
-    ax1.set_facecolor('#2A2B3D')
-    ax1.set_title('ប្រៀបធៀបចំណូល vs ចំណាយ', color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
-    ax1.tick_params(colors='#D0D0D0', labelsize=10)
-    ax1.spines['bottom'].set_color('#555566')
-    ax1.spines['left'].set_color('#555566')
-    ax1.spines['top'].set_visible(False)
-    ax1.spines['right'].set_visible(False)
-    ax1.yaxis.grid(True, linestyle='--', alpha=0.3, color='#888888')
-
-    for bar in bars:
-        height = bar.get_height()
-        ax1.annotate(f'${height:,.2f}',
-                     xy=(bar.get_x() + bar.get_width() / 2, height),
-                     xytext=(0, 4),
-                     textcoords='offset points',
-                     ha='center', va='bottom',
-                     color='#FFFFFF', fontsize=10, fontweight='bold')
-
-    # --- ២. Donut Chart: ចំណាត់ថ្នាក់ចំណាយ ឬចំណូល ---
-    breakdown = expense_by_cat if expense_by_cat else income_by_cat
-    breakdown_type = 'ចំណាត់ថ្នាក់ចំណាយ' if expense_by_cat else 'ចំណាត់ថ្នាក់ចំណូល'
-
-    ax2.set_facecolor('#1E1E2E')
-    ax2.set_title(breakdown_type, color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
-
-    labels = list(breakdown.keys())
-    values = list(breakdown.values())
+    currencies = list(dict.fromkeys(r[2] for r in filtered))
     donut_colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F7B801', '#9B5DE5', '#00BBF9', '#00F5D4']
-    if len(labels) > len(donut_colors):
-        donut_colors = donut_colors * ((len(labels) // len(donut_colors)) + 1)
 
-    wedges, texts, autotexts = ax2.pie(
-        values,
-        labels=labels,
-        autopct='%1.1f%%',
-        startangle=140,
-        colors=donut_colors[:len(labels)],
-        wedgeprops=dict(width=0.4, edgecolor='#1E1E2E', linewidth=2),
-        textprops=dict(color='#EAEAEA', fontsize=9),
-        pctdistance=0.75
-    )
-    for autotext in autotexts:
-        autotext.set_color('#FFFFFF')
-        autotext.set_fontweight('bold')
-        autotext.set_fontsize(8)
+    # ករណីមានរូបិយប័ណ្ណតែមួយ (Single Currency: USD ឬ KHR)
+    if len(currencies) == 1:
+        cur = currencies[0]
+        cur_recs = filtered
+        inc = sum(r[3] for r in cur_recs if r[0] == 'income')
+        exp = sum(r[3] for r in cur_recs if r[0] == 'expense')
+        
+        breakdown_dict = {}
+        for r in cur_recs:
+            if r[0] == ('expense' if exp > 0 else 'income'):
+                breakdown_dict[r[1]] = breakdown_dict.get(r[1], 0.0) + r[3]
+        
+        fmt = lambda v: f"${v:,.2f}" if cur == "USD" else f"{v:,.0f} ៛"
+        
+        fig = plt.figure(figsize=(10, 5), dpi=150)
+        fig.patch.set_facecolor('#1E1E2E')
 
-    plt.suptitle(f'របាយការណ៍ហិរញ្ញវត្ថុ {title} ({start_date} ដល់ {end_date})',
-                 color='#F1F2F6', fontsize=13, fontweight='bold', y=0.98)
+        ax1 = fig.add_subplot(1, 2, 1)
+        ax2 = fig.add_subplot(1, 2, 2)
 
-    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+        # Bar Chart
+        categories = ['ចំណូល (Income)', 'ចំណាយ (Expense)']
+        amounts = [inc, exp]
+        colors = ['#2ECC71', '#E74C3C']
 
-    buf = BytesIO()
-    plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
-    plt.close(fig)
-    buf.seek(0)
-    return buf
+        bars = ax1.bar(categories, amounts, color=colors, width=0.45, edgecolor='#FFFFFF', linewidth=0.5)
+        ax1.set_facecolor('#2A2B3D')
+        ax1.set_title(f'ចំណូល vs ចំណាយ ({cur})', color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
+        ax1.tick_params(colors='#D0D0D0', labelsize=10)
+        ax1.spines['bottom'].set_color('#555566')
+        ax1.spines['left'].set_color('#555566')
+        ax1.spines['top'].set_visible(False)
+        ax1.spines['right'].set_visible(False)
+        ax1.yaxis.grid(True, linestyle='--', alpha=0.3, color='#888888')
 
-# ----------------- របាយការណ៍បែងចែកពេលវេលា -----------------
+        for bar in bars:
+            height = bar.get_height()
+            ax1.annotate(fmt(height),
+                         xy=(bar.get_x() + bar.get_width() / 2, height),
+                         xytext=(0, 4),
+                         textcoords='offset points',
+                         ha='center', va='bottom',
+                         color='#FFFFFF', fontsize=10, fontweight='bold')
+
+        # Donut Chart
+        ax2.set_facecolor('#1E1E2E')
+        breakdown_title = f'ចំណាត់ថ្នាក់ចំណាយ ({cur})' if exp > 0 else f'ចំណាត់ថ្នាក់ចំណូល ({cur})'
+        ax2.set_title(breakdown_title, color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
+
+        labels = list(breakdown_dict.keys())
+        values = list(breakdown_dict.values())
+        if labels:
+            c_palette = donut_colors * ((len(labels) // len(donut_colors)) + 1)
+            wedges, texts, autotexts = ax2.pie(
+                values,
+                labels=labels,
+                autopct='%1.1f%%',
+                startangle=140,
+                colors=c_palette[:len(labels)],
+                wedgeprops=dict(width=0.4, edgecolor='#1E1E2E', linewidth=2),
+                textprops=dict(color='#EAEAEA', fontsize=9),
+                pctdistance=0.75
+            )
+            for autotext in autotexts:
+                autotext.set_color('#FFFFFF')
+                autotext.set_fontweight('bold')
+                autotext.set_fontsize(8)
+        else:
+            ax2.axis('off')
+
+        plt.suptitle(f'របាយការណ៍ហិរញ្ញវត្ថុ {title} ({cur})\n{start_date} ដល់ {end_date}',
+                     color='#F1F2F6', fontsize=13, fontweight='bold', y=0.98)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.93])
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
+        plt.close(fig)
+        buf.seek(0)
+        return buf
+
+    else:
+        # ករណីមានទាំងពីររូបិយប័ណ្ណ (Both USD & KHR: 2x2 Grid)
+        fig, axes = plt.subplots(2, 2, figsize=(11, 8), dpi=150)
+        fig.patch.set_facecolor('#1E1E2E')
+
+        for row_idx, cur in enumerate(['USD', 'KHR']):
+            cur_recs = [r for r in filtered if r[2] == cur]
+            inc = sum(r[3] for r in cur_recs if r[0] == 'income')
+            exp = sum(r[3] for r in cur_recs if r[0] == 'expense')
+            breakdown_dict = {}
+            for r in cur_recs:
+                if r[0] == ('expense' if exp > 0 else 'income'):
+                    breakdown_dict[r[1]] = breakdown_dict.get(r[1], 0.0) + r[3]
+
+            fmt = lambda v, c=cur: f"${v:,.2f}" if c == "USD" else f"{v:,.0f} ៛"
+
+            ax_bar = axes[row_idx, 0]
+            ax_pie = axes[row_idx, 1]
+
+            # Bar Chart
+            bars = ax_bar.bar(['ចំណូល', 'ចំណាយ'], [inc, exp], color=['#2ECC71', '#E74C3C'], width=0.45, edgecolor='#FFFFFF', linewidth=0.5)
+            ax_bar.set_facecolor('#2A2B3D')
+            ax_bar.set_title(f'ចំណូល vs ចំណាយ ({cur})', color='#FFFFFF', fontsize=11, fontweight='bold')
+            ax_bar.tick_params(colors='#D0D0D0', labelsize=9)
+            ax_bar.spines['bottom'].set_color('#555566')
+            ax_bar.spines['left'].set_color('#555566')
+            ax_bar.spines['top'].set_visible(False)
+            ax_bar.spines['right'].set_visible(False)
+            ax_bar.yaxis.grid(True, linestyle='--', alpha=0.3, color='#888888')
+
+            for bar in bars:
+                height = bar.get_height()
+                ax_bar.annotate(fmt(height),
+                                xy=(bar.get_x() + bar.get_width() / 2, height),
+                                xytext=(0, 3),
+                                textcoords='offset points',
+                                ha='center', va='bottom',
+                                color='#FFFFFF', fontsize=9, fontweight='bold')
+
+            # Donut Chart
+            ax_pie.set_facecolor('#1E1E2E')
+            ax_pie.set_title(f'ចំណាត់ថ្នាក់ ({cur})', color='#FFFFFF', fontsize=11, fontweight='bold')
+
+            labels = list(breakdown_dict.keys())
+            values = list(breakdown_dict.values())
+            if labels:
+                c_palette = donut_colors * ((len(labels) // len(donut_colors)) + 1)
+                wedges, texts, autotexts = ax_pie.pie(
+                    values,
+                    labels=labels,
+                    autopct='%1.1f%%',
+                    startangle=140,
+                    colors=c_palette[:len(labels)],
+                    wedgeprops=dict(width=0.4, edgecolor='#1E1E2E', linewidth=1.5),
+                    textprops=dict(color='#EAEAEA', fontsize=8),
+                    pctdistance=0.75
+                )
+                for autotext in autotexts:
+                    autotext.set_color('#FFFFFF')
+                    autotext.set_fontweight('bold')
+                    autotext.set_fontsize(7.5)
+            else:
+                ax_pie.axis('off')
+
+        plt.suptitle(f'របាយការណ៍ហិរញ្ញវត្ថុ {title} (USD & KHR)\n{start_date} ដល់ {end_date}',
+                     color='#F1F2F6', fontsize=13, fontweight='bold', y=0.98)
+        plt.tight_layout(rect=[0, 0.03, 1, 0.94])
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
+        plt.close(fig)
+        buf.seek(0)
+        return buf
+
+# ----------------- របាយការណ៍បែងចែកពេលវេលា & រូបិយប័ណ្ណ -----------------
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
         [InlineKeyboardButton("📅 ប្រចាំថ្ងៃ", callback_data="rep_daily"),
@@ -270,49 +439,98 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     records = db.get_report(user_id, start_date, end_date)
     
-    total_inc = 0.0
-    total_exp = 0.0
-    breakdown_text = ""
-    
-    for r_type, cat, amt, count in records:
-        if r_type == "income":
-            total_inc += amt
-            breakdown_text += f"• [ចំណូល] {cat}: +${amt:,.2f} ({count} ដង)\n"
+    usd_income = 0.0
+    usd_expense = 0.0
+    usd_breakdown = []
+
+    khr_income = 0.0
+    khr_expense = 0.0
+    khr_breakdown = []
+
+    for r_type, cat, cur, amt, count in records:
+        if cur == "KHR":
+            if r_type == "income":
+                khr_income += amt
+                khr_breakdown.append(f"  • [ចំណូល] {cat}: +{amt:,.0f} ៛ ({count} ដង)")
+            else:
+                khr_expense += amt
+                khr_breakdown.append(f"  • [ចំណាយ] {cat}: -{amt:,.0f} ៛ ({count} ដង)")
         else:
-            total_exp += amt
-            breakdown_text += f"• [ចំណាយ] {cat}: -${amt:,.2f} ({count} ដង)\n"
+            if r_type == "income":
+                usd_income += amt
+                usd_breakdown.append(f"  • [ចំណូល] {cat}: +${amt:,.2f} ({count} ដង)")
+            else:
+                usd_expense += amt
+                usd_breakdown.append(f"  • [ចំណាយ] {cat}: -${amt:,.2f} ({count} ដង)")
+                
+    usd_balance = usd_income - usd_expense
+    khr_balance = khr_income - khr_expense
+    
+    msg_parts = [
+        f"📊 **របាយការណ៍ {title}**",
+        f"ចន្លោះ: `{start_date}` ដល់ `{end_date}`",
+        "-----------------------------"
+    ]
+
+    has_any = bool(records)
+    if not has_any:
+        msg_parts.append("មិនមានទិន្នន័យក្នុងចន្លោះពេលនេះឡើយ។")
+    else:
+        # បង្ហាញផ្នែកដុល្លារ
+        if usd_income > 0 or usd_expense > 0 or not khr_breakdown:
+            usd_text = "\n".join(usd_breakdown) if usd_breakdown else "  (គ្មានប្រតិបត្តិការ)"
+            msg_parts.extend([
+                "💵 **គណនីដុល្លារ (USD)**:",
+                usd_text,
+                f"  សរុបចំណូល: +${usd_income:,.2f}",
+                f"  សរុបចំណាយ: -${usd_expense:,.2f}",
+                f"  សមតុល្យដុល្លារ: **${usd_balance:,.2f}**",
+                "-----------------------------"
+            ])
             
-    balance = total_inc - total_exp
-    body_text = breakdown_text if breakdown_text else "មិនមានទិន្នន័យឡើយ\n"
+        # បង្ហាញផ្នែករៀល
+        if khr_income > 0 or khr_expense > 0:
+            khr_text = "\n".join(khr_breakdown) if khr_breakdown else "  (គ្មានប្រតិបត្តិការ)"
+            msg_parts.extend([
+                "🇰🇭 **គណនីរៀល (KHR)**:",
+                khr_text,
+                f"  សរុបចំណូល: +{khr_income:,.0f} ៛",
+                f"  សរុបចំណាយ: -{khr_expense:,.0f} ៛",
+                f"  សមតុល្យរៀល: **{khr_balance:,.0f} ៛**",
+                "-----------------------------"
+            ])
+
+    msg = "\n".join(msg_parts)
     
-    msg = (
-        f" **របាយការណ៍ {title}**\n"
-        f"ចន្លោះ: `{start_date}` ដល់ `{end_date}`\n"
-        f"-----------------------------\n"
-        f"{body_text}"
-        f"-----------------------------\n"
-        f" សរុបចំណូល: +${total_inc:,.2f}\n"
-        f" សរុបចំណាយ: -${total_exp:,.2f}\n"
-        f" សមតុល្យសល់: **${balance:,.2f}**"
-    )
-    
-    # បន្ថែមប៊ូតុងមើល Chart ប្រសិនបើមានទិន្នន័យ
+    # ប៊ូតុងមើល Chart
     keyboard = []
-    if records:
-        keyboard.append([InlineKeyboardButton("📊 បង្ហាញក្រាហ្វិក (Chart)", callback_data=f"chart_{data}")])
+    if has_any:
+        has_usd = any(r[2] == 'USD' for r in records)
+        has_khr = any(r[2] == 'KHR' for r in records)
+        
+        if has_usd and has_khr:
+            keyboard.append([
+                InlineKeyboardButton("📊 Chart រួម ($ & ៛)", callback_data=f"chart_{data}_ALL"),
+                InlineKeyboardButton("💵 Chart ($)", callback_data=f"chart_{data}_USD"),
+                InlineKeyboardButton("🇰🇭 Chart (៛)", callback_data=f"chart_{data}_KHR")
+            ])
+        elif has_khr:
+            keyboard.append([InlineKeyboardButton("🇰🇭 បង្ហាញក្រាហ្វិក (Chart ៛)", callback_data=f"chart_{data}_KHR")])
+        else:
+            keyboard.append([InlineKeyboardButton("💵 បង្ហាញក្រាហ្វិក (Chart $)", callback_data=f"chart_{data}_USD")])
+            
     reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
-    
     await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
 
 # ----------------- បង្ហាញ Chart (ក្រាហ្វិក) -----------------
 async def chart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton("📊 ប្រចាំថ្ងៃ", callback_data="chart_rep_daily"),
-         InlineKeyboardButton("📊 ប្រចាំសប្ដាហ៍", callback_data="chart_rep_weekly")],
-        [InlineKeyboardButton("📊 ប្រចាំខែ", callback_data="chart_rep_monthly"),
-         InlineKeyboardButton("📊 ប្រចាំត្រីមាស", callback_data="chart_rep_quarterly")],
-        [InlineKeyboardButton("📊 ប្រចាំឆមាស", callback_data="chart_rep_semiannual"),
-         InlineKeyboardButton("📊 ប្រចាំឆ្នាំ", callback_data="chart_rep_yearly")]
+        [InlineKeyboardButton("📊 ប្រចាំថ្ងៃ", callback_data="chart_rep_daily_ALL"),
+         InlineKeyboardButton("📊 ប្រចាំសប្ដាហ៍", callback_data="chart_rep_weekly_ALL")],
+        [InlineKeyboardButton("📊 ប្រចាំខែ", callback_data="chart_rep_monthly_ALL"),
+         InlineKeyboardButton("📊 ប្រចាំត្រីមាស", callback_data="chart_rep_quarterly_ALL")],
+        [InlineKeyboardButton("📊 ប្រចាំឆមាស", callback_data="chart_rep_semiannual_ALL"),
+         InlineKeyboardButton("📊 ប្រចាំឆ្នាំ", callback_data="chart_rep_yearly_ALL")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("📊 សូមជ្រើសរើសចន្លោះពេលដើម្បីបង្កើត Chart ក្រាហ្វិក៖", reply_markup=reply_markup)
@@ -321,48 +539,74 @@ async def chart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
 
-    data = query.data.replace("chart_", "")
-    user_id = query.from_user.id
+    # Callback data format: chart_rep_monthly_ALL, chart_rep_monthly_USD, etc.
+    raw_data = query.data.replace("chart_", "")
+    parts = raw_data.split("_")
+    
+    # Reconstruct data_key (e.g. rep_monthly) and currency filter
+    if len(parts) >= 3 and parts[-1] in ("ALL", "USD", "KHR"):
+        cur_filter = None if parts[-1] == "ALL" else parts[-1]
+        data_key = "_".join(parts[:-1])
+    else:
+        cur_filter = None
+        data_key = raw_data
 
-    start_date, end_date, title = get_date_range_and_title(data)
+    user_id = query.from_user.id
+    start_date, end_date, title = get_date_range_and_title(data_key)
     if not start_date:
         return
 
     records = db.get_report(user_id, start_date, end_date)
-    chart_buf = generate_finance_chart(records, title, start_date, end_date)
+    chart_buf = generate_finance_chart(records, title, start_date, end_date, currency_filter=cur_filter)
 
     if chart_buf:
-        caption = f"📊 **ក្រាហ្វិករបាយការណ៍ហិរញ្ញវត្ថុ {title}**\nចន្លោះ: `{start_date}` ដល់ `{end_date}`"
+        filter_label = f"({cur_filter})" if cur_filter else "($ & ៛)"
+        caption = f"📊 **ក្រាហ្វិករបាយការណ៍ហិរញ្ញវត្ថុ {title} {filter_label}**\nចន្លោះ: `{start_date}` ដល់ `{end_date}`"
         await query.message.reply_photo(photo=chart_buf, caption=caption, parse_mode="Markdown")
     else:
         await query.message.reply_text(f"⚠️ មិនមានទិន្នន័យសម្រាប់បង្កើតក្រាហ្វិក {title} (`{start_date}` ដល់ `{end_date}`) ឡើយ។")
 
 # ----------------- ធ្វើបច្ចុប្បន្នភាព និងលុប (Update/Edit) -----------------
 async def edit_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ឧទាហរណ៍: /edit 1 25.50 ម្ហូប ញ៉ាំបាយ
+    # ឧទាហរណ៍: /edit 1 25.50$ ម្ហូប ញ៉ាំបាយ ឬ /edit 1 100000៛ ម្ហូប ញ៉ាំបាយ
     user_id = update.effective_user.id
     args = context.args
     
     if len(args) < 3:
-        await update.message.reply_text("ទម្រង់ខុស! គំរូ: `/edit [ID] [ចំនួនទឹកប្រាក់] [ផ្នែក] [បរិយាយ]`", parse_mode="Markdown")
+        await update.message.reply_text(
+            "ទម្រង់ខុស! គំរូ:\n"
+            "• `/edit [ID] [ចំនួន$ ឬ ៛] [ផ្នែក] [បរិយាយ]`\n"
+            "  ឧទាហរណ៍: `/edit 1 25.50$ ម្ហូប ញ៉ាំបាយ` ឬ `/edit 1 60000៛ ម្ហូប ញ៉ាំបាយ`",
+            parse_mode="Markdown"
+        )
         return
         
     try:
         trans_id = int(args[0])
-        amount = float(args[1])
+        amt_str = args[1]
+        
+        # ពិនិត្យមើលរូបិយប័ណ្ណ
+        currency = None
+        if re.search(r"៛|khr|r", amt_str, re.I):
+            currency = "KHR"
+        elif re.search(r"\$|usd", amt_str, re.I):
+            currency = "USD"
+            
+        clean_amt_str = re.sub(r"[^\d.]", "", amt_str)
+        amount = float(clean_amt_str)
         category = args[2]
         desc = " ".join(args[3:]) if len(args) > 3 else "កែប្រែថ្មី"
         
-        ok = db.update_transaction(trans_id, user_id, amount=amount, category=category, description=desc)
+        ok = db.update_transaction(trans_id, user_id, amount=amount, currency=currency, category=category, description=desc)
         if ok:
-            await update.message.reply_text(f"✅ បានធ្វើបច្ចុប្បន្នភាពប្រតិបត្តិការ ID {trans_id} រួចរាល់!")
+            cur_display = f"({currency})" if currency else ""
+            await update.message.reply_text(f"✅ បានធ្វើបច្ចុប្បន្នភាពប្រតិបត្តិការ ID {trans_id} {cur_display} រួចរាល់!")
         else:
             await update.message.reply_text("❌ រកមិនឃើញ ID ឬអ្នកគ្មានសិទ្ធិកែប្រែប្រតិបត្តិការនេះឡើយ។")
     except ValueError:
         await update.message.reply_text("❌ ទឹកប្រាក់ ឬ ID ត្រូវតែជាលេខ។")
 
 async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # ឧទាហរណ៍: /delete 1
     user_id = update.effective_user.id
     if not context.args:
         await update.message.reply_text("គំរូ: `/delete [ID]`", parse_mode="Markdown")
@@ -424,7 +668,7 @@ def main():
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_record))
     
-    print("Bot is running...")
+    print("Bot is running with multi-currency ($/៛) & bank slip reader...")
     app.run_polling()
 
 if __name__ == "__main__":
