@@ -191,12 +191,13 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             breakdown_text += f"• [ចំណាយ] {cat}: -${amt:,.2f} ({count} ដង)\n"
             
     balance = total_inc - total_exp
+    body_text = breakdown_text if breakdown_text else "មិនមានទិន្នន័យឡើយ\n"
     
     msg = (
         f" **របាយការណ៍ {title}**\n"
         f"ចន្លោះ: `{start_date}` ដល់ `{end_date}`\n"
         f"-----------------------------\n"
-        f"{breakdown_text if breakdown_text else 'មិនមានទិន្នន័យឡើយ\n'}"
+        f"{body_text}"
         f"-----------------------------\n"
         f" សរុបចំណូល: +${total_inc:,.2f}\n"
         f" សរុបចំណាយ: -${total_exp:,.2f}\n"
