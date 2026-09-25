@@ -244,6 +244,28 @@ async def delete_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.message.reply_text("❌ ID ត្រូវតែជាលេខ។")
 
+# ----------------- Health Check Server (សម្រាប់ Render Web Service) -----------------
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(b"Bot is alive!")
+
+    def log_message(self, format, *args):
+        pass
+
+def run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    try:
+        server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
+        server.serve_forever()
+    except Exception as e:
+        print(f"Health server error: {e}")
+
 # ----------------- Main App -----------------
 def main():
     db.init_db()
@@ -251,6 +273,10 @@ def main():
     if not BOT_TOKEN or BOT_TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
         print("Error: សូមបញ្ចូល Telegram Bot Token របស់អ្នកនៅក្នុង .env ឬ Environment Variable ជាមុនសិន។")
         return
+
+    # Start health check server if running on cloud platforms (Render / Railway)
+    if "PORT" in os.environ:
+        threading.Thread(target=run_health_server, daemon=True).start()
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     
