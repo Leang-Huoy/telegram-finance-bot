@@ -5,6 +5,14 @@ from datetime import datetime, timedelta
 from io import BytesIO
 from PIL import Image
 import pytesseract
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+
+# កំណត់ Font គាំទ្រភាសាខ្មែរសម្រាប់ Matplotlib
+khmer_fonts = ['Noto Sans Khmer', 'Khmer OS Content', 'Khmer OS Siemreap', 'Khmer UI', 'Leelawadee UI', 'Nirmala UI', 'DejaVu Sans']
+plt.rcParams['font.sans-serif'] = khmer_fonts + plt.rcParams.get('font.sans-serif', [])
+plt.rcParams['axes.unicode_minus'] = False
 
 if sys.platform == "win32":
     try:
@@ -71,7 +79,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• ចំណាយ: `- ចំនួន ផ្នែក ការពិពណ៌នា`\n"
         "  ឧទាហរណ៍: `- 15 ម្ហូបអាហារ ញ៉ាំបាយថ្ងៃត្រង់`\n\n"
         " របៀបកត់ត្រាតាមវិក្កយបត្រ៖ ផ្ញើរូបភាពវិក្កយបត្រធនាគារចូលទីនេះ\n"
-        " របាយការណ៍៖ វាយ /report\n"
+        " របាយការណ៍សង្ខេប៖ វាយ /report\n"
+        " ក្រាហ្វិក (Chart)៖ វាយ /chart\n"
         " កែប្រែ/លុប៖ វាយ /edit [ID] ឬ /delete [ID]"
     )
     await update.message.reply_text(welcome_msg, parse_mode="Markdown")
@@ -129,15 +138,122 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await update.message.reply_text(" មិនអាចទាញយកទឹកប្រាក់ពីរូបភាពបានទេ។ សូមបញ្ចូលដោយដៃតាមទម្រង់: `- [ចំនួន] [ផ្នែក] [បរិយាយ]`")
 
+# ----------------- មុខងារគណនាកាលបរិច្ឆេទ & បង្កើត Chart -----------------
+def get_date_range_and_title(data_key):
+    now = datetime.now()
+    if data_key == "rep_daily":
+        return now.strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំថ្ងៃ"
+    elif data_key == "rep_weekly":
+        return (now - timedelta(days=7)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំសប្ដាហ៍"
+    elif data_key == "rep_monthly":
+        return now.strftime("%Y-%m-01"), now.strftime("%Y-%m-%d"), "ប្រចាំខែនេះ"
+    elif data_key == "rep_quarterly":
+        return (now - timedelta(days=90)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំត្រីមាស (៩០ ថ្ងៃ)"
+    elif data_key == "rep_semiannual":
+        return (now - timedelta(days=180)).strftime("%Y-%m-%d"), now.strftime("%Y-%m-%d"), "ប្រចាំឆមាស (១៨០ ថ្ងៃ)"
+    elif data_key == "rep_yearly":
+        return now.strftime("%Y-01-01"), now.strftime("%Y-%m-%d"), "ប្រចាំឆ្នាំនេះ"
+    return None, None, None
+
+def generate_finance_chart(records, title, start_date, end_date):
+    if not records:
+        return None
+
+    income_by_cat = {}
+    expense_by_cat = {}
+    total_income = 0.0
+    total_expense = 0.0
+
+    for r_type, cat, amt, count in records:
+        if r_type == 'income':
+            income_by_cat[cat] = income_by_cat.get(cat, 0.0) + amt
+            total_income += amt
+        else:
+            expense_by_cat[cat] = expense_by_cat.get(cat, 0.0) + amt
+            total_expense += amt
+
+    if total_income == 0 and total_expense == 0:
+        return None
+
+    # បង្កើត Figure រចនាប័ទ្ម Modern Dark Theme
+    fig = plt.figure(figsize=(10, 5), dpi=150)
+    fig.patch.set_facecolor('#1E1E2E')
+
+    ax1 = fig.add_subplot(1, 2, 1)
+    ax2 = fig.add_subplot(1, 2, 2)
+
+    # --- ១. Bar Chart: ចំណូល vs ចំណាយ ---
+    categories = ['ចំណូល (Income)', 'ចំណាយ (Expense)']
+    amounts = [total_income, total_expense]
+    colors = ['#2ECC71', '#E74C3C']
+
+    bars = ax1.bar(categories, amounts, color=colors, width=0.45, edgecolor='#FFFFFF', linewidth=0.5)
+    ax1.set_facecolor('#2A2B3D')
+    ax1.set_title('ប្រៀបធៀបចំណូល vs ចំណាយ', color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
+    ax1.tick_params(colors='#D0D0D0', labelsize=10)
+    ax1.spines['bottom'].set_color('#555566')
+    ax1.spines['left'].set_color('#555566')
+    ax1.spines['top'].set_visible(False)
+    ax1.spines['right'].set_visible(False)
+    ax1.yaxis.grid(True, linestyle='--', alpha=0.3, color='#888888')
+
+    for bar in bars:
+        height = bar.get_height()
+        ax1.annotate(f'${height:,.2f}',
+                     xy=(bar.get_x() + bar.get_width() / 2, height),
+                     xytext=(0, 4),
+                     textcoords='offset points',
+                     ha='center', va='bottom',
+                     color='#FFFFFF', fontsize=10, fontweight='bold')
+
+    # --- ២. Donut Chart: ចំណាត់ថ្នាក់ចំណាយ ឬចំណូល ---
+    breakdown = expense_by_cat if expense_by_cat else income_by_cat
+    breakdown_type = 'ចំណាត់ថ្នាក់ចំណាយ' if expense_by_cat else 'ចំណាត់ថ្នាក់ចំណូល'
+
+    ax2.set_facecolor('#1E1E2E')
+    ax2.set_title(breakdown_type, color='#FFFFFF', fontsize=12, fontweight='bold', pad=12)
+
+    labels = list(breakdown.keys())
+    values = list(breakdown.values())
+    donut_colors = ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F7B801', '#9B5DE5', '#00BBF9', '#00F5D4']
+    if len(labels) > len(donut_colors):
+        donut_colors = donut_colors * ((len(labels) // len(donut_colors)) + 1)
+
+    wedges, texts, autotexts = ax2.pie(
+        values,
+        labels=labels,
+        autopct='%1.1f%%',
+        startangle=140,
+        colors=donut_colors[:len(labels)],
+        wedgeprops=dict(width=0.4, edgecolor='#1E1E2E', linewidth=2),
+        textprops=dict(color='#EAEAEA', fontsize=9),
+        pctdistance=0.75
+    )
+    for autotext in autotexts:
+        autotext.set_color('#FFFFFF')
+        autotext.set_fontweight('bold')
+        autotext.set_fontsize(8)
+
+    plt.suptitle(f'របាយការណ៍ហិរញ្ញវត្ថុ {title} ({start_date} ដល់ {end_date})',
+                 color='#F1F2F6', fontsize=13, fontweight='bold', y=0.98)
+
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+
+    buf = BytesIO()
+    plt.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor(), edgecolor='none')
+    plt.close(fig)
+    buf.seek(0)
+    return buf
+
 # ----------------- របាយការណ៍បែងចែកពេលវេលា -----------------
 async def report_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     keyboard = [
-        [InlineKeyboardButton(" ប្រចាំថ្ងៃ", callback_data="rep_daily"),
-         InlineKeyboardButton(" ប្រចាំសប្ដាហ៍", callback_data="rep_weekly")],
-        [InlineKeyboardButton(" ប្រចាំខែ", callback_data="rep_monthly"),
-         InlineKeyboardButton(" ប្រចាំត្រីមាស", callback_data="rep_quarterly")],
-        [InlineKeyboardButton(" ប្រចាំឆមាស", callback_data="rep_semiannual"),
-         InlineKeyboardButton(" ប្រចាំឆ្នាំ", callback_data="rep_yearly")]
+        [InlineKeyboardButton("📅 ប្រចាំថ្ងៃ", callback_data="rep_daily"),
+         InlineKeyboardButton("📅 ប្រចាំសប្ដាហ៍", callback_data="rep_weekly")],
+        [InlineKeyboardButton("📅 ប្រចាំខែ", callback_data="rep_monthly"),
+         InlineKeyboardButton("📅 ប្រចាំត្រីមាស", callback_data="rep_quarterly")],
+        [InlineKeyboardButton("📅 ប្រចាំឆមាស", callback_data="rep_semiannual"),
+         InlineKeyboardButton("📅 ប្រចាំឆ្នាំ", callback_data="rep_yearly")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("សូមជ្រើសរើសចន្លោះពេលដើម្បីមើលរបាយការណ៍៖", reply_markup=reply_markup)
@@ -148,32 +264,8 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     data = query.data
     user_id = query.from_user.id
-    now = datetime.now()
-    
-    if data == "rep_daily":
-        start_date = end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំថ្ងៃ"
-    elif data == "rep_weekly":
-        start_date = (now - timedelta(days=7)).strftime("%Y-%m-%d")
-        end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំសប្ដាហ៍"
-    elif data == "rep_monthly":
-        start_date = now.strftime("%Y-%m-01")
-        end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំខែនេះ"
-    elif data == "rep_quarterly":
-        start_date = (now - timedelta(days=90)).strftime("%Y-%m-%d")
-        end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំត្រីមាស (៩០ ថ្ងៃចុងក្រោយ)"
-    elif data == "rep_semiannual":
-        start_date = (now - timedelta(days=180)).strftime("%Y-%m-%d")
-        end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំឆមាស (១៨០ ថ្ងៃចុងក្រោយ)"
-    elif data == "rep_yearly":
-        start_date = now.strftime("%Y-01-01")
-        end_date = now.strftime("%Y-%m-%d")
-        title = "ប្រចាំឆ្នាំនេះ"
-    else:
+    start_date, end_date, title = get_date_range_and_title(data)
+    if not start_date:
         return
 
     records = db.get_report(user_id, start_date, end_date)
@@ -203,7 +295,47 @@ async def report_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f" សរុបចំណាយ: -${total_exp:,.2f}\n"
         f" សមតុល្យសល់: **${balance:,.2f}**"
     )
-    await query.edit_message_text(msg, parse_mode="Markdown")
+    
+    # បន្ថែមប៊ូតុងមើល Chart ប្រសិនបើមានទិន្នន័យ
+    keyboard = []
+    if records:
+        keyboard.append([InlineKeyboardButton("📊 បង្ហាញក្រាហ្វិក (Chart)", callback_data=f"chart_{data}")])
+    reply_markup = InlineKeyboardMarkup(keyboard) if keyboard else None
+    
+    await query.edit_message_text(msg, parse_mode="Markdown", reply_markup=reply_markup)
+
+# ----------------- បង្ហាញ Chart (ក្រាហ្វិក) -----------------
+async def chart_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    keyboard = [
+        [InlineKeyboardButton("📊 ប្រចាំថ្ងៃ", callback_data="chart_rep_daily"),
+         InlineKeyboardButton("📊 ប្រចាំសប្ដាហ៍", callback_data="chart_rep_weekly")],
+        [InlineKeyboardButton("📊 ប្រចាំខែ", callback_data="chart_rep_monthly"),
+         InlineKeyboardButton("📊 ប្រចាំត្រីមាស", callback_data="chart_rep_quarterly")],
+        [InlineKeyboardButton("📊 ប្រចាំឆមាស", callback_data="chart_rep_semiannual"),
+         InlineKeyboardButton("📊 ប្រចាំឆ្នាំ", callback_data="chart_rep_yearly")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await update.message.reply_text("📊 សូមជ្រើសរើសចន្លោះពេលដើម្បីបង្កើត Chart ក្រាហ្វិក៖", reply_markup=reply_markup)
+
+async def chart_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data.replace("chart_", "")
+    user_id = query.from_user.id
+
+    start_date, end_date, title = get_date_range_and_title(data)
+    if not start_date:
+        return
+
+    records = db.get_report(user_id, start_date, end_date)
+    chart_buf = generate_finance_chart(records, title, start_date, end_date)
+
+    if chart_buf:
+        caption = f"📊 **ក្រាហ្វិករបាយការណ៍ហិរញ្ញវត្ថុ {title}**\nចន្លោះ: `{start_date}` ដល់ `{end_date}`"
+        await query.message.reply_photo(photo=chart_buf, caption=caption, parse_mode="Markdown")
+    else:
+        await query.message.reply_text(f"⚠️ មិនមានទិន្នន័យសម្រាប់បង្កើតក្រាហ្វិក {title} (`{start_date}` ដល់ `{end_date}`) ឡើយ។")
 
 # ----------------- ធ្វើបច្ចុប្បន្នភាព និងលុប (Update/Edit) -----------------
 async def edit_record(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -283,9 +415,11 @@ def main():
     
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("report", report_command))
+    app.add_handler(CommandHandler("chart", chart_command))
     app.add_handler(CommandHandler("edit", edit_record))
     app.add_handler(CommandHandler("delete", delete_record))
     
+    app.add_handler(CallbackQueryHandler(chart_callback, pattern="^chart_"))
     app.add_handler(CallbackQueryHandler(report_callback, pattern="^rep_"))
     app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_record))
