@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ទម្រង់បំពេញព័ត៌មានផ្ទាល់ខ្លួន | ស្រុកស្រីស្នំ ខេត្តសៀមរាប</title>
+
+  <!-- Google Fonts: Kantumruy Pro & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Kantumruy+Pro:wght@300;400;500;600;700&family=Moul&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Kantumruy Pro', 'Inter', 'sans-serif'],
+            moul: ['Moul', 'cursive'],
+          },
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SheetJS for Excel Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Kantumruy Pro', 'Inter', sans-serif;
+    }
+    .font-moul {
+      font-family: 'Moul', cursive;
+    }
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-only {
+        display: block !important;
+      }
+      .print-card {
+        box-shadow: none !important;
+        border: 2px solid #333 !important;
+      }
+    }
+    .print-only {
+      display: none;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen antialiased flex flex-col justify-between transition-colors duration-200">
+
+  <!-- Header / Navigation Bar -->
+  <header class="no-print bg-white/95 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span>ទម្រង់បែបបទបំពេញព័ត៌មានផ្ទាល់ខ្លួន</span>
+            <span class="text-[11px] bg-emerald-100 text-emerald-800 font-semibold px-2 py-0.5 rounded-full border border-emerald-200">
+              ស្រីស្នំ • សៀមរាប
+            </span>
+          </h1>
+          <p class="text-xs text-slate-500">ប្រព័ន្ធប្រមូល និងគ្រប់គ្រងទិន្នន័យប្រជាពលរដ្ឋ និងសមាជិក</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          onclick="refreshAllForm()"
+          id="btnHeaderRefresh"
+          class="text-xs bg-amber-50 hover:bg-amber-100 text-amber-800 font-semibold px-3 py-1.5 rounded-lg border border-amber-200 transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+          title="Refresh និងសម្អាតទម្រង់ឡើងវិញ"
+        >
+          <svg class="w-3.5 h-3.5 text-amber-600 transition-transform duration-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          <span class="hidden sm:inline">Refresh ទម្រង់</span>
+          <span class="sm:hidden">Refresh</span>
+        </button>
+
+        <button id="btnDemoData" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-medium px-3 py-1.5 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          <span class="hidden sm:inline">បញ្ចូលទិន្នន័យគំរូ</span>
+          <span class="sm:hidden">គំរូ</span>
+        </button>
+
+        <a href="#tableSection" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-1.5 rounded-lg border border-slate-300 transition-colors flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
+          </svg>
+          <span>បញ្ជីទិន្នន័យ</span>
+          <span id="savedCountBadge" class="bg-emerald-600 text-white text-[10px] px-1.5 py-0.2 rounded-full font-bold">0</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Notification Toast Container -->
+  <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main Container -->
+  <main class="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 w-full flex-1">
+    
+    <!-- Hero Banner / Breadcrumb -->
+    <div class="no-print bg-gradient-to-r from-emerald-800 via-teal-800 to-slate-800 text-white rounded-2xl p-6 sm:p-7 shadow-xl mb-8 relative overflow-hidden">
+      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+      <div class="relative z-10 max-w-2xl">
+        <div class="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-200 text-xs px-3 py-1 rounded-full border border-emerald-400/30 mb-3">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>ទម្រង់រៀបចំដោយស្វ័យប្រវត្តិ (Smart Auto-Sync Form)</span>
+        </div>
+        <h2 class="text-xl sm:text-2xl font-bold tracking-tight mb-2">
+          បំពេញព័ត៌មានបុគ្គល និងអាសយដ្ឋាន
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-200 leading-relaxed">
+          ប្រព័ន្ធបំពេញដោយស្វ័យប្រវត្តិនូវថ្ងៃខែឆ្នាំកំណើតជាភាសាខ្មែរ គណនាអាយុ និងជ្រើសរើសភូមិតាមឃុំទាំង ៦ ក្នុងស្រុកស្រីស្នំ ខេត្តសៀមរាប។
+        </p>
+      </div>
+    </div>
+
+    <!-- Main Grid: Form (Left) & Real-time Live Preview (Right) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      
+      <!-- FORM CARD (COL 7) -->
+      <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        
+        <form id="registrationForm" class="space-y-6" onsubmit="event.preventDefault(); handleFormSubmit();">
+          
+          <!-- SECTION 1: Personal Details -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">១</span>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base">ព័ត៌មានអត្តសញ្ញាណ (Identity)</h3>
+            </div>
+
+            <!-- Khmer Full Name -->
+            <div>
+              <label for="nameKhmer" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                ឈ្មោះជាភាសាខ្មែរ <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="nameKhmer"
+                  name="nameKhmer"
+                  required
+                  placeholder="ឧ. សុខ សំណាង"
+                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm rounded-xl px-4 py-2.5 transition duration-150 outline-none"
+                />
+                <span class="absolute right-3.5 top-2.5 text-slate-400 text-xs">អក្សរខ្មែរ</span>
+              </div>
+            </div>
+
+            <!-- Latin Full Name -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="nameLatin" class="block text-xs font-semibold text-slate-700">
+                  ឈ្មោះជាភាសាឡាតាំង <span class="text-rose-500">*</span>
+                </label>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onclick="syncLatinFromKhmer(true)"
+                    class="text-[11px] text-indigo-700 hover:text-indigo-900 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md border border-indigo-200 font-semibold flex items-center gap-1 cursor-pointer transition shadow-2xs"
+                    title="ចុចដើម្បី Refresh បកប្រែឈ្មោះពីភាសាខ្មែរ"
+                  >
+                    <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span>Refresh ឈ្មោះឡាតាំង</span>
+                  </button>
+                  <button
+                    type="button"
+                    onclick="transformLatinToUpper()"
+                    class="text-[11px] text-slate-600 hover:text-slate-800 underline font-medium cursor-pointer"
+                  >
+                    <span>UPPERCASE</span>
+                  </button>
+                </div>
+              </div>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="nameLatin"
+                  name="nameLatin"
+                  required
+                  placeholder="ឧ. SOK SAMNANG"
+                  lang="en"
+                  inputmode="latin"
+                  autocapitalize="characters"
+                  autocomplete="off"
+                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm rounded-xl pl-4 pr-28 py-2.5 uppercase font-medium transition duration-150 outline-none tracking-wide"
+                />
+                <button
+                  type="button"
+                  onclick="syncLatinFromKhmer(true)"
+                  class="absolute right-2 top-2 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-bold flex items-center gap-1 transition cursor-pointer shadow-xs"
+                  title="ចុចដើម្បី Refresh ឈ្មោះជាឡាតាំងពីឈ្មោះខ្មែរភ្លាមៗ"
+                >
+                  <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                  </svg>
+                  <span>Refresh EN</span>
+                </button>
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">
+                ✨ អូតូចាប់ឈ្មោះខ្មែរបកប្រែជាឡាតាំងភ្លាមៗ (ឬបើវាយច្រឡំ Keyboard ខ្មែរ វានឹងប្តូរជាអក្សរអង់គ្លេសស្វ័យប្រវត្តិ)
+              </p>
+            </div>
+
+            <!-- Gender -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-2">
+                ភេទ <span class="text-rose-500">*</span>
+              </label>
+              <div class="grid grid-cols-3 gap-3">
+                <label class="cursor-pointer">
+                  <input type="radio" name="gender" value="ស្រី" class="peer sr-only" checked />
+                  <div class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-800 peer-checked:font-semibold transition-all">
+                    <span>👩</span>
+                    <span class="text-sm">ស្រី (Female)</span>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="gender" value="ប្រុស" class="peer sr-only" />
+                  <div class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-800 peer-checked:font-semibold transition-all">
+                    <span>👨</span>
+                    <span class="text-sm">ប្រុស (Male)</span>
+                  </div>
+                </label>
+
+                <label class="cursor-pointer">
+                  <input type="radio" name="gender" value="ផ្សេងៗ" class="peer sr-only" />
+                  <div class="flex items-center justify-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-800 peer-checked:font-semibold transition-all">
+                    <span>✨</span>
+                    <span class="text-sm">ផ្សេងៗ (Other)</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 2: Date of Birth -->
+          <div class="space-y-4 pt-2">
+            <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">២</span>
+                <h3 class="font-bold text-slate-800 text-sm sm:text-base">ថ្ងៃ ខែ ឆ្នាំកំណើត (Date of Birth)</h3>
+              </div>
+              <span id="calculatedAgeBadge" class="hidden text-xs bg-emerald-100 text-emerald-800 font-semibold px-2.5 py-1 rounded-full border border-emerald-200">
+                អាយុ៖ --
+              </span>
+            </div>
+
+            <div class="bg-slate-50/80 border border-slate-200/90 rounded-2xl p-4 space-y-4">
+              
+              <!-- 1. Numeric Date of Birth (ជ្រើសរើស ឬសរសេរ ខែជាលេខ ឧ. 15/04/1995) -->
+              <div>
+                <div class="flex items-center justify-between mb-1.5">
+                  <label for="dobNumeric" class="block text-xs font-semibold text-slate-700">
+                    ថ្ងៃ ខែ ឆ្នាំកំណើត (ខែជាលេខ ឧ. 15/04/1995) <span class="text-rose-500">*</span>
+                  </label>
+                  <span class="text-[11px] text-slate-500">ទម្រង់ ថ្ងៃ/ខែ/ឆ្នាំ</span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <div class="relative flex-1">
+                    <input
+                      type="text"
+                      id="dobNumeric"
+                      name="dobNumeric"
+                      required
+                      placeholder="15/04/1995"
+                      class="w-full bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm font-medium rounded-xl px-4 py-2.5 outline-none transition"
+                      maxlength="10"
+                    />
+                    <span class="absolute right-3 top-2.5 text-slate-400 text-xs pointer-events-none">DD/MM/YYYY</span>
+                  </div>
+
+                  <!-- Native Calendar Date Picker for quick picking -->
+                  <div class="relative">
+                    <input
+                      type="date"
+                      id="dobPicker"
+                      class="sr-only"
+                      onchange="handleDatePickerChange(this.value)"
+                    />
+                    <button
+                      type="button"
+                      onclick="document.getElementById('dobPicker').showPicker ? document.getElementById('dobPicker').showPicker() : document.getElementById('dobPicker').focus()"
+                      class="p-2.5 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 rounded-xl transition shadow-sm flex items-center gap-1.5 text-xs font-medium"
+                      title="ជ្រើសរើសតាមប្រតិទិន"
+                    >
+                      <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                      </svg>
+                      <span class="hidden sm:inline">ប្រតិទិន</span>
+                    </button>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">
+                  💡 លោកអ្នកអាចចុចរូបប្រតិទិន ឬវាយផ្ទាល់ជាលេខ (ឧទាហរណ៍៖ 15/04/1995)
+                </p>
+              </div>
+
+              <!-- 2. Khmer Month Date of Birth (សរសេរខែជាភាសាខ្មែរ ឧ. 15 មេសា 1995) -->
+              <div class="pt-2 border-t border-slate-200/80">
+                <div class="flex items-center justify-between mb-1.5">
+                  <label for="dobKhmer" class="block text-xs font-semibold text-slate-700">
+                    ថ្ងៃខែឆ្នាំកំណើត (ខែជាភាសាខ្មែរ ឧ. 15 មេសា 1995) <span class="text-rose-500">*</span>
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <button
+                      type="button"
+                      id="toggleKhmerDigitsBtn"
+                      onclick="toggleKhmerDigitsFormat()"
+                      class="text-[11px] text-emerald-700 hover:text-emerald-800 font-medium underline"
+                    >
+                      ប្តូរជាលេខខ្មែរ (១៥ មេសា ១៩៩៥)
+                    </button>
+                  </div>
+                </div>
+
+                <div class="relative">
+                  <input
+                    type="text"
+                    id="dobKhmer"
+                    name="dobKhmer"
+                    required
+                    placeholder="15 មេសា 1995"
+                    class="w-full bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm font-semibold rounded-xl px-4 py-2.5 outline-none transition"
+                  />
+                  <div class="absolute right-2.5 top-2 flex items-center gap-1">
+                    <span class="text-xs bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded border border-emerald-200">
+                      Auto Sync
+                    </span>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-500 mt-1">
+                  ✨ បំពេញដោយស្វ័យប្រវត្តិតាមជម្រើសខាងលើ ឬអាចវាយបញ្ចូលដោយដៃបាន។
+                </p>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SECTION 3: Address (Province, District, Commune, Village) -->
+          <div class="space-y-4 pt-2">
+            <div class="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <span class="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">៣</span>
+              <h3 class="font-bold text-slate-800 text-sm sm:text-base">អាសយដ្ឋានបច្ចុប្បន្ន (Current Address)</h3>
+            </div>
+
+            <!-- Province & District (Pre-selected Siem Reap / Srei Snam) -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label for="province" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                  ខេត្ត (Province) <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <select
+                    id="province"
+                    name="province"
+                    class="w-full bg-slate-100 border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 font-medium appearance-none cursor-not-allowed outline-none"
+                    disabled
+                  >
+                    <option value="សៀមរាប" selected>សៀមរាប (Siem Reap)</option>
+                  </select>
+                  <div class="absolute right-3.5 top-3 pointer-events-none text-slate-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label for="district" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                  ស្រុក (District) <span class="text-rose-500">*</span>
+                </label>
+                <div class="relative">
+                  <select
+                    id="district"
+                    name="district"
+                    class="w-full bg-slate-100 border border-slate-300 text-slate-800 text-sm rounded-xl px-4 py-2.5 font-medium appearance-none cursor-not-allowed outline-none"
+                    disabled
+                  >
+                    <option value="ស្រីស្នំ" selected>ស្រីស្នំ (Srei Snam)</option>
+                  </select>
+                  <div class="absolute right-3.5 top-3 pointer-events-none text-slate-500">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Commune (ឃុំ) -->
+            <div>
+              <label for="commune" class="block text-xs font-semibold text-slate-700 mb-1.5">
+                ឃុំ (Commune) <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <select
+                  id="commune"
+                  name="commune"
+                  required
+                  onchange="handleCommuneChange(this.value)"
+                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm rounded-xl px-4 py-2.5 font-medium appearance-none cursor-pointer outline-none transition"
+                >
+                  <option value="" disabled selected>-- សូមជ្រើសរើសឃុំ --</option>
+                  <option value="ជ្រោយនាងងួន">ឃុំជ្រោយនាងងួន (Chrouy Neang Nguon)</option>
+                  <option value="ក្លាំងហាយ">ឃុំក្លាំងហាយ (Klang Hay)</option>
+                  <option value="ត្រាំសសរ">ឃុំត្រាំសសរ (Tram Sasar)</option>
+                  <option value="មោង">ឃុំមោង (Moung)</option>
+                  <option value="ប្រីយ៍">ឃុំប្រីយ៍ (Prei)</option>
+                  <option value="ស្លែងស្ពាន">ឃុំស្លែងស្ពាន (Slaeng Spean)</option>
+                </select>
+                <div class="absolute right-3.5 top-3 pointer-events-none text-slate-500">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Village (ភូមិ) -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="villageInput" class="block text-xs font-semibold text-slate-700">
+                  ភូមិ (Village) <span class="text-rose-500">*</span>
+                </label>
+                <span id="villageCountLabel" class="text-[11px] text-slate-500">ជ្រើសរើសឃុំជាមុន</span>
+              </div>
+
+              <!-- Datalist + input for both fast selection and custom typing -->
+              <div class="relative">
+                <input
+                  type="text"
+                  id="villageInput"
+                  name="village"
+                  list="villageList"
+                  required
+                  placeholder="-- ជ្រើសរើស ឬវាយបញ្ចូលឈ្មោះភូមិ --"
+                  class="w-full bg-slate-50 border border-slate-300 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-slate-800 text-sm rounded-xl px-4 py-2.5 font-medium outline-none transition"
+                />
+                <datalist id="villageList">
+                  <!-- Populated dynamically via JS -->
+                </datalist>
+                <div class="absolute right-3.5 top-3 pointer-events-none text-slate-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                </div>
+              </div>
+
+              <!-- Quick village pills -->
+              <div id="villagePillsContainer" class="flex flex-wrap gap-1.5 mt-2 max-h-24 overflow-y-auto pt-1">
+                <!-- Clickable badges will appear here -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- SUBMIT & ACTION BUTTONS -->
+          <div class="pt-4 border-t border-slate-200 flex flex-wrap items-center gap-3">
+            <button
+              type="submit"
+              class="flex-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium py-3 px-6 rounded-xl shadow-lg shadow-emerald-600/25 transition flex items-center justify-center gap-2 text-sm cursor-pointer"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              <span>រក្សាទុកទិន្នន័យ (Save Data)</span>
+            </button>
+
+            <button
+              type="button"
+              onclick="refreshAllForm()"
+              class="bg-slate-100 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-800 text-slate-700 font-semibold py-3 px-5 rounded-xl border border-slate-300 transition text-sm flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Refresh និងសម្អាតទម្រង់ឡើងវិញ"
+            >
+              <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+              </svg>
+              <span>Refresh ទម្រង់</span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- LIVE PREVIEW & OFFICIAL SUMMARY CARD (COL 5) -->
+      <div class="lg:col-span-5 space-y-6">
+        
+        <!-- Official ID Slip Preview (Printable Card) -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden print-card">
+          
+          <!-- Card Header Decoration -->
+          <div class="bg-gradient-to-r from-emerald-700 via-teal-700 to-emerald-800 text-white p-4 text-center relative">
+            <div class="text-[11px] tracking-wider uppercase opacity-90">ព្រះរាជាណាចក្រកម្ពុជា • ជាតិ សាសនា ព្រះមហាក្សត្រ</div>
+            <div class="font-moul text-sm sm:text-base mt-1 text-amber-200">ប័ណ្ណសង្ខេបព័ត៌មានបុគ្គល</div>
+            <div class="text-[11px] opacity-80 mt-0.5">ស្រុកស្រីស្នំ ខេត្តសៀមរាប</div>
+          </div>
+
+          <!-- Card Body -->
+          <div class="p-5 sm:p-6 space-y-4">
+            
+            <div class="flex items-center gap-4 pb-4 border-b border-slate-100">
+              <div id="previewAvatar" class="w-16 h-16 rounded-2xl bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center text-3xl shadow-inner">
+                👩
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 id="previewNameKhmer" class="text-base sm:text-lg font-bold text-slate-800 truncate">
+                  -- ឈ្មោះជាភាសាខ្មែរ --
+                </h4>
+                <p id="previewNameLatin" class="text-xs sm:text-sm font-semibold text-emerald-700 uppercase tracking-wide truncate">
+                  -- NAME IN LATIN --
+                </p>
+                <div class="flex items-center gap-2 mt-1">
+                  <span id="previewGender" class="text-[11px] bg-slate-100 text-slate-700 font-medium px-2 py-0.5 rounded border border-slate-200">
+                    ភេទ៖ ស្រី
+                  </span>
+                  <span id="previewAge" class="text-[11px] bg-emerald-50 text-emerald-800 font-semibold px-2 py-0.5 rounded border border-emerald-200">
+                    អាយុ៖ --
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detailed Grid Items -->
+            <div class="grid grid-cols-1 gap-2.5 text-xs text-slate-600">
+              
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-500">ថ្ងៃខែឆ្នាំកំណើត (ខែជាលេខ)៖</span>
+                <span id="previewDobNumeric" class="font-semibold text-slate-800">--/--/----</span>
+              </div>
+
+              <div class="flex justify-between items-center py-1 border-b border-slate-100">
+                <span class="text-slate-500">ថ្ងៃខែឆ្នាំកំណើត (ខែខ្មែរ)៖</span>
+                <span id="previewDobKhmer" class="font-semibold text-emerald-800">-- -- ----</span>
+              </div>
+
+              <div class="flex justify-between items-start py-1 border-b border-slate-100">
+                <span class="text-slate-500">អាសយដ្ឋានបច្ចុប្បន្ន៖</span>
+                <span id="previewAddress" class="font-medium text-slate-800 text-right max-w-[65%]">
+                  ភូមិ -- ឃុំ -- ស្រុកស្រីស្នំ ខេត្តសៀមរាប
+                </span>
+              </div>
+
+              <div class="flex justify-between items-center py-1">
+                <span class="text-slate-500">កាលបរិច្ឆេទបង្កើត៖</span>
+                <span id="previewCreatedAt" class="text-slate-500">--</span>
+              </div>
+
+            </div>
+
+            <!-- Quick Action Toolbar for Card -->
+            <div class="no-print pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onclick="copyPreviewText()"
+                class="flex-1 text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 py-2 px-3 rounded-lg border border-slate-200 transition font-medium flex items-center justify-center gap-1.5"
+              >
+                <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <span>ចម្លងជាអត្ថបទ</span>
+              </button>
+
+              <button
+                type="button"
+                onclick="window.print()"
+                class="flex-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 py-2 px-3 rounded-lg border border-emerald-200 transition font-medium flex items-center justify-center gap-1.5"
+              >
+                <svg class="w-3.5 h-3.5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+                </svg>
+                <span>បោះពុម្ព (Print)</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Helpful Guide Box -->
+        <div class="no-print bg-amber-50/70 border border-amber-200 rounded-2xl p-5 text-xs text-amber-900 space-y-2">
+          <div class="font-bold flex items-center gap-1.5 text-amber-800">
+            <svg class="w-4 h-4 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <span>ការណែនាំស្តីពីការបំពេញទម្រង់</span>
+          </div>
+          <ul class="list-disc list-inside space-y-1 text-amber-800/90 pl-1">
+            <li><strong>ខេត្ត & ស្រុក៖</strong> បានកំណត់ស្វ័យប្រវត្តិតាមសំណើ (ខេត្តសៀមរាប ស្រុកស្រីស្នំ)។</li>
+            <li><strong>ឃុំទាំង ៦៖</strong> ជ្រោយនាងងួន, ក្លាំងហាយ, ត្រាំសសរ, មោង, ប្រីយ៍, ស្លែងស្ពាន។</li>
+            <li><strong>ភូមិ៖</strong> ពេលជ្រើសរើសឃុំ ប្រព័ន្ធនឹងបង្ហាញឈ្មោះភូមិផ្លូវការភ្លាមៗ ឬអាចវាយបញ្ចូលដោយផ្ទាល់។</li>
+            <li><strong>ថ្ងៃខែឆ្នាំកំណើត៖</strong> បញ្ចូលលេខ (ឧ. 15/04/1995) ប្រព័ន្ធនឹងបំប្លែងទៅជា "15 មេសា 1995" ដោយស្វ័យប្រវត្តិ។</li>
+          </ul>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- SECTION 4: TABLE OF SAVED RECORDS (BOTTOM) -->
+    <section id="tableSection" class="no-print mt-12 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
+      
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+        <div>
+          <h3 class="text-base sm:text-lg font-bold text-slate-800 flex items-center gap-2">
+            <span>បញ្ជីទិន្នន័យដែលបានរក្សាទុក</span>
+            <span id="tableCountBadge" class="text-xs bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-semibold border border-slate-200">
+              0 នាក់
+            </span>
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">ទិន្នន័យត្រូវបានរក្សាទុកដោយសុវត្ថិភាពក្នុងកម្មវិធីរុករក (LocalStorage)</p>
+        </div>
+
+        <div class="flex items-center flex-wrap gap-2.5">
+          <!-- Search Input -->
+          <div class="relative">
+            <input
+              type="text"
+              id="searchRecordInput"
+              oninput="handleSearchRecords(this.value)"
+              placeholder="ស្វែងរកតាមឈ្មោះ, ឃុំ, ភូមិ..."
+              class="text-xs bg-slate-50 border border-slate-300 focus:bg-white focus:border-emerald-500 rounded-xl pl-8 pr-3 py-2 outline-none w-52 sm:w-64 transition"
+            />
+            <svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+            </svg>
+          </div>
+
+          <!-- Refresh Table Button -->
+          <button
+            type="button"
+            onclick="loadRecordsFromStorage(); showToast('បាន Refresh បញ្ជីទិន្នន័យរួចរាល់!');"
+            class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium px-3 py-2 rounded-xl border border-slate-300 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+            title="Refresh បញ្ជីទិន្នន័យឡើងវិញ"
+          >
+            <svg class="w-3.5 h-3.5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>Refresh បញ្ជី</span>
+          </button>
+
+          <!-- Export Excel Button -->
+          <button
+            type="button"
+            onclick="exportToExcel()"
+            class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-3.5 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            <span>នាំចេញជា Excel (.xlsx)</span>
+          </button>
+
+          <!-- Clear All Button -->
+          <button
+            type="button"
+            onclick="clearAllRecords()"
+            class="text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-medium px-3 py-2 rounded-xl border border-rose-200 transition flex items-center gap-1 cursor-pointer"
+            title="លុបទិន្នន័យទាំងអស់"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+            </svg>
+            <span>សម្អាត</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Responsive Table -->
+      <div class="overflow-x-auto mt-4">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold tracking-wider text-[11px]">
+              <th class="py-3 px-3">ល.រ</th>
+              <th class="py-3 px-3">ឈ្មោះខ្មែរ</th>
+              <th class="py-3 px-3">ឈ្មោះឡាតាំង</th>
+              <th class="py-3 px-3">ភេទ</th>
+              <th class="py-3 px-3">ថ្ងៃកំណើត (លេខ)</th>
+              <th class="py-3 px-3">ថ្ងៃកំណើត (ខែខ្មែរ)</th>
+              <th class="py-3 px-3">ឃុំ</th>
+              <th class="py-3 px-3">ភូមិ</th>
+              <th class="py-3 px-3 text-center">សកម្មភាព</th>
+            </tr>
+          </thead>
+          <tbody id="recordsTableBody" class="divide-y divide-slate-100 text-slate-700">
+            <!-- Dynamic Table Rows -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div id="tableEmptyState" class="py-12 text-center text-slate-400">
+        <svg class="w-12 h-12 mx-auto text-slate-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        <p class="text-sm font-medium text-slate-500">មិនទាន់មានទិន្នន័យត្រូវបានរក្សាទុកនៅឡើយទេ</p>
+        <p class="text-xs text-slate-400 mt-1">សូមបំពេញទម្រង់ខាងលើ រួចចុច "រក្សាទុកទិន្នន័យ"</p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="no-print bg-white border-t border-slate-200 py-5 text-center text-xs text-slate-500">
+    <div class="max-w-6xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        <span>ទម្រង់បែបបទព័ត៌មាន • ឃុំទាំង ៦ ស្រុកស្រីស្នំ ខេត្តសៀមរាប</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-slate-400">|</span>
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="text-emerald-700 hover:underline">
+          ឡើងទៅលើបង្អស់ &uarr;
+        </button>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT LOGIC -->
+  <script>
+    // --- 1. DATA DEFINITIONS ---
+    const KHMER_MONTHS = [
+      'មករា', 'កុម្ភៈ', 'មីនា', 'មេសា', 'ឧសភា', 'មិថុនា',
+      'កក្កដា', 'សីហា', 'កញ្ញា', 'តុលា', 'វិច្ឆិកា', 'ធ្នូ'
+    ];
+
+    const KHMER_DIGITS = ['០', '១', '២', '៣', '៤', '៥', '៦', '៧', '៨', '៩'];
+
+    // Official 6 Communes & Villages in Srei Snam, Siem Reap
+    const SREI_SNAM_DATA = {
+      province: 'សៀមរាប',
+      district: 'ស្រីស្នំ',
+      communes: {
+        'ជ្រោយនាងងួន': [
+          'ត្រុំខាងជើង',
+          'ឫស្សីសាញ់',
+          'ត្រុំខាងត្បូង',
+          'យាយម៉ី',
+          'ស្តៅពក',
+          'អំពៅដៀប',
+          'ជ្រោយនាងងួន'
+        ],
+        'ក្លាំងហាយ': [
+          'ស្លែងតាវេត',
+          'ពង្របត់ចាន់',
+          'ស្លែងគង់',
+          'ល្បើក',
+          'សំរោង',
+          'ក្លាំងហាយ',
+          'គោកថ្កូវ'
+        ],
+        'ត្រាំសសរ': [
+          'នាងស្រោង',
+          'រំដេង',
+          'ធ្លក',
+          'ស្មាច់',
+          'ព្រេច',
+          'បេង',
+          'ពង្រ'
+        ],
+        'មោង': [
+          'មោងខាងត្បូង',
+          'មោងខាងជើង',
+          'ខ្វែក',
+          'កំបោរ',
+          'ល្វា'
+        ],
+        'ប្រីយ៍': [
+          'ប្រីយ៍ ០១',
+          'ប្រីយ៍ ០២',
+          'ត្រាំសសរ',
+          'ក្របៅ',
+          'ក្រូចចារ'
+        ],
+        'ស្លែងស្ពាន': [
+          'ស្លែងស្ពាន',
+          'ច្រនៀង',
+          'ភ្នំដី',
+          'ដំណាក់ដំរី',
+          'ចំការចេក',
+          'ព្រះខ្សេត',
+          'ធ្លក',
+          'ត្រាំកង់'
+        ]
+      }
+    };
+
+    // State Variables
+    let useKhmerDigitsInKhmerDob = false;
+    let savedRecords = [];
+    let isLatinManuallyEdited = false;
+
+    // --- KHMER TO LATIN ROMANIZATION DICTIONARY & NIDA KEYBOARD ENGINE ---
+    const KHMER_NAME_DICT = {
+      // Family & Common Names
+      'សុខ': 'SOK',
+      'សុខា': 'SOKHA',
+      'សុខេង': 'SOKHENG',
+      'សុខុម': 'SOKHOM',
+      'សុផល': 'SOPHAL',
+      'សំណាង': 'SAMNANG',
+      'សំ': 'SAM',
+      'សំអាន': 'SAM AN',
+      'សំអុល': 'SAM OL',
+      'ជា': 'CHEA',
+      'ចាន់': 'CHAN',
+      'ចាន់ថា': 'CHANTHA',
+      'ចាន់ថន': 'CHANTHORN',
+      'ចាន់ណា': 'CHANNA',
+      'ចាន់នី': 'CHANNY',
+      'ចាន់ធូ': 'CHANTHOU',
+      'ចាន់ដារ៉ា': 'CHANDARA',
+      'ចន្ថា': 'CHANTHA',
+      'ចរិយា': 'CHARIYA',
+      'ចំរើន': 'CHAMROEUN',
+      'ហេង': 'HENG',
+      'លី': 'LY',
+      'លាង': 'LEANG',
+      'លីម': 'LIM',
+      'គង់': 'KONG',
+      'គឹម': 'KIM',
+      'គឹមឡុង': 'KIMLONG',
+      'គឹមសួរ': 'KIMSUOR',
+      'គឹមហុង': 'KIMHONG',
+      'គៀន': 'KIEN',
+      'ស្រី': 'SREY',
+      'ស្រីមុំ': 'SREYMOM',
+      'ស្រីពៅ': 'SREYPOV',
+      'ស្រីនាង': 'SREYNEANG',
+      'ស្រីលក្ខណ៍': 'SREYLEAK',
+      'ស្រីរ័ត្ន': 'SREYROTH',
+      'ស្រីនិត': 'SREYNITH',
+      'វណ្ណា': 'VANNA',
+      'វណ្ណី': 'VANNY',
+      'វណ្ណាក់': 'VANNAK',
+      'វិបុល': 'VIBOL',
+      'វិសាល': 'VISAL',
+      'វិចិត្រ': 'VICHETR',
+      'វិជ្ជកា': 'VIJJEKA',
+      'ប៊ុន': 'BUN',
+      'ប៊ុនថន': 'BUNTHORN',
+      'ប៊ុនរ៉ុង': 'BUNRONG',
+      'ប៊ុនធឿន': 'BUNTHOEUN',
+      'ម៉ៅ': 'MAO',
+      'ម៉េង': 'MENG',
+      'ម៉ែន': 'MEN',
+      'ម៉ុក': 'MOK',
+      'ម៉ាន': 'MAN',
+      'រ័ត្ន': 'ROTH',
+      'រតនៈ': 'RATANAK',
+      'រដ្ឋ': 'ROTH',
+      'រដ្ឋា': 'ROTHA',
+      'រស្មី': 'REASMEY',
+      'រឿន': 'ROEUN',
+      'រិទ្ធ': 'RITH',
+      'រិទ្ធី': 'RITHY',
+      'ធី': 'THY',
+      'ធីតា': 'THIDA',
+      'ធារី': 'THEARY',
+      'ធន់': 'THON',
+      'ធៀម': 'THIEM',
+      'ដារ៉ា': 'DARA',
+      'ដួង': 'DUONG',
+      'ដេត': 'DET',
+      'ឌី': 'DY',
+      'ឌុច': 'DUCH',
+      'ភារម្យ': 'PHEAROM',
+      'ភឿន': 'PHOEUN',
+      'ភិន': 'PHIN',
+      'ផល្លា': 'PHALLA',
+      'ផល្លី': 'PHALLY',
+      'ផល': 'PHAL',
+      'សុវណ្ណ': 'SOVANN',
+      'សុវណ្ណារ៉ា': 'SOVANNARA',
+      'សម្បត្តិ': 'SAMBATH',
+      'សំបូរ': 'SAMBOR',
+      'ឈុន': 'CHHUN',
+      'ឈាង': 'CHHEANG',
+      'ឈាន': 'CHHEAN',
+      'ឈីន': 'CHHIN',
+      'សេង': 'SENG',
+      'សេងហុង': 'SENGHONG',
+      'ស៊ុន': 'SUN',
+      'ពេជ្រ': 'PECH',
+      'សាន': 'SAN',
+      'សាន្ត': 'SAN',
+      'សាត': 'SAT',
+      'សន': 'SORN',
+      'ស៊ន': 'SORN',
+      'សឿន': 'SOEUN',
+      'សឿម': 'SOEM',
+      'យិន': 'YIN',
+      'យឹម': 'YIM',
+      'យឿន': 'YOEUN',
+      'យូ': 'YOU',
+      'យន់': 'YON',
+      'ណារិទ្ធ': 'NARITH',
+      'ណារ៉ា': 'NARA',
+      'ណារិន': 'NARIN',
+      'ណារី': 'NARY',
+      'ណុប': 'NOP',
+      'ណាត': 'NAT',
+      'ពិសិដ្ឋ': 'PISETH',
+      'ពិសី': 'PISEY',
+      'មាស': 'MEAS',
+      'មាសា': 'MEASA',
+      'សារ៉េត': 'SARETH',
+      'ព្រំ': 'PROM',
+      'ព្រាប': 'PREAP',
+      'ប្រាក់': 'PRAK',
+      'អៀង': 'IENG',
+      'អ៊ឹម': 'IM',
+      'អ៊ុក': 'OUK',
+      'អ៊ុំ': 'OM',
+      'អ៊ុ': 'OM',
+      'អាន': 'AN',
+      'អាង': 'ANG',
+      'ឯក': 'EK',
+      'ទៀង': 'TIENG',
+      'ង៉ែត': 'NGET',
+      'នួន': 'NUON',
+      'សួន': 'SUON',
+      'សួស': 'SUOS',
+      'ស៊ីន': 'SIN',
+      'ស៊ីណាត': 'SINAT',
+      'ស៊ីថា': 'SITHA',
+      'ប៉ែន': 'PEN',
+      'ប៉ាវ': 'PAV',
+      'ប៊ុត': 'BUT',
+      'ឆៃ': 'CHHAI',
+      'ឆាយ': 'CHHAY',
+      'តាន់': 'TAN',
+      'ទូច': 'TOUCH',
+      'តូច': 'TOCH',
+      'ទេព': 'TEP',
+      'ទិត្យ': 'TITH',
+      'ផាន': 'PHAN',
+      'សុភា': 'SOPHEA',
+      'សុភ័ក្ត្រ': 'SOPHEAK',
+      'សុផាត': 'SOPHAT',
+      'សែម': 'SAEM',
+      'កែវ': 'KEO',
+      'កុសល': 'KOSOL',
+      'កល្យាណ': 'KALYAN',
+      'ខៀវ': 'KHIEV',
+      'ខាត់': 'KHAT',
+      'ចិន': 'CHIN',
+      'ជួន': 'CHUON',
+      'ថា': 'THA',
+      'ថុល': 'THOL',
+      'ថន': 'THORN',
+      'នេត្រ': 'NET',
+      'នីតា': 'NITA',
+      'ពៅ': 'POV',
+      'រ៉ា': 'RA',
+      'វ៉ាន់': 'VAN',
+      'វ៉ា': 'VA',
+      'វុទ្ធី': 'VUTHY',
+      'វុធ': 'VUTH',
+      'វីរៈ': 'VIRAK',
+      'ហ៊ាង': 'HEANG',
+      'ហួត': 'HUOT',
+      'កុយ': 'KOY',
+      'មុនី': 'MONY',
+      'សាវឿន': 'SAVOEUN',
+      'សារឿន': 'SAROEUN',
+      'សុជាតា': 'SOCHEATA',
+      'បុប្ផា': 'BOPHA',
+      'កញ្ញា': 'KANHA',
+      'រចនា': 'RACHANA',
+      'មាលា': 'MEALEA',
+      'កេសរ': 'KESOR',
+      'នារី': 'NEARY',
+      'សុជាត': 'SOCHEAT',
+      'ចន្ទី': 'CHANTY',
+      'វលក្ខណ៍': 'VOLEAK',
+      'ផានិត': 'PHANITH',
+      'រុងរឿង': 'RUNG ROEUNG'
+    };
+
+    // Khmer Consonant & Vowel phonetic mappings for fallback
+    const KHMER_CONSONANTS = {
+      'ក': 'K', 'ខ': 'KH', 'គ': 'K', 'ឃ': 'KH', 'ង': 'NG',
+      'ច': 'CH', 'ឆ': 'CHH', 'ជ': 'CH', 'ឈ': 'CHH', 'ញ': 'NH',
+      'ដ': 'D', 'ឋ': 'TH', 'ឌ': 'D', 'ឍ': 'TH', 'ណ': 'N',
+      'ត': 'T', 'ថ': 'TH', 'ទ': 'T', 'ធ': 'TH', 'ន': 'N',
+      'ប': 'B', 'ផ': 'PH', 'ព': 'P', 'ភ': 'PH', 'ម': 'M',
+      'យ': 'Y', 'រ': 'R', 'ល': 'L', 'វ': 'V', 'ស': 'S',
+      'ហ': 'H', 'ឡ': 'L', 'អ': 'A'
+    };
+
+    const KHMER_VOWELS = {
+      'ា': 'A', 'ិ': 'I', 'ី': 'EY', 'ឹ': 'OE', 'ឺ': 'UE',
+      'ុ': 'O', 'ូ': 'OU', 'ួ': 'UO', 'ើ': 'AE', 'ឿ': 'OEA',
+      'ៀ': 'IE', 'េ': 'E', 'ែ': 'AE', 'ៃ': 'AI', 'ោ': 'AO',
+      'ៅ': 'AU', 'ុំ': 'OM', 'ំ': 'M', 'ះ': 'H', 'ៈ': 'AK'
+    };
+
+    // NiDA Khmer Keyboard layout to QWERTY English key mapper
+    const NIDA_KEY_MAP = {
+      'ឆ': 'Q', 'ឹ': 'W', 'េ': 'E', 'រ': 'R', 'ត': 'T', 'យ': 'Y', 'ុ': 'U', 'ិ': 'I', 'ោ': 'O', 'ផ': 'P',
+      'ៀ': '', 'ឪ': '', 'ា': 'A', 'ស': 'S', 'ដ': 'D', 'ថ': 'F', 'ង': 'G', 'ហ': 'H', '្': '', 'ក': 'K',
+      'ល': 'L', 'ើ': '', '់': '', 'ឋ': 'Z', 'ខ': 'X', 'ច': 'C', 'វ': 'V', 'ប': 'B', 'ន': 'N', 'ម': 'M',
+      'ឈ': 'Q', 'ឺ': 'W', 'ែ': 'E', 'ឬ': 'R', 'ទ': 'T', 'ួ': 'Y', 'ូ': 'U', 'ី': 'I', 'ៅ': 'O', 'ភ': 'P',
+      'អ': 'A', 'ៃ': 'S', 'ឌ': 'D', 'ធ': 'F', '៌': 'G', 'ះ': 'H', 'ញ': 'J', 'គ': 'K', 'ឡ': 'L',
+      'ឍ': 'Z', 'ឃ': 'X', 'ជ': 'C', 'េះ': 'V', 'ព': 'B', 'ណ': 'N', 'ំ': 'M'
+    };
+
+    function transliterateKhmerWord(w) {
+      if (!w) return '';
+      if (KHMER_NAME_DICT[w]) return KHMER_NAME_DICT[w];
+
+      for (let len = w.length - 1; len >= 2; len--) {
+        const prefix = w.slice(0, len);
+        const suffix = w.slice(len);
+        if (KHMER_NAME_DICT[prefix] && KHMER_NAME_DICT[suffix]) {
+          return KHMER_NAME_DICT[prefix] + KHMER_NAME_DICT[suffix];
+        }
+      }
+
+      return decomposeKhmerPhonetic(w);
+    }
+
+    function decomposeKhmerPhonetic(word) {
+      let result = '';
+      let i = 0;
+      while (i < word.length) {
+        const ch = word[i];
+        if (ch === '\u17D2' && i + 1 < word.length) {
+          const subCons = word[i + 1];
+          if (subCons === 'រ') result += 'R';
+          else if (subCons === 'ល') result += 'L';
+          else if (subCons === 'ម') result += 'M';
+          else if (subCons === 'វ') result += 'V';
+          else result += (KHMER_CONSONANTS[subCons] || '');
+          i += 2;
+          continue;
+        }
+
+        if (KHMER_CONSONANTS[ch]) {
+          result += KHMER_CONSONANTS[ch];
+          i++;
+          continue;
+        }
+
+        if (KHMER_VOWELS[ch]) {
+          result += KHMER_VOWELS[ch];
+          i++;
+          continue;
+        }
+
+        if (ch === '៍' || ch === '់' || ch === '៉' || ch === '៊') {
+          i++;
+          continue;
+        }
+
+        if (/[a-zA-Z]/.test(ch)) {
+          result += ch.toUpperCase();
+        }
+        i++;
+      }
+      return result;
+    }
+
+    // Segment Khmer full name into recognized words/syllables (handles with or without spaces)
+    function segmentKhmerName(text) {
+      if (!text) return [];
+      const chunks = text.trim().split(/\s+/);
+      const result = [];
+      
+      for (const chunk of chunks) {
+        if (KHMER_NAME_DICT[chunk]) {
+          result.push(chunk);
+          continue;
+        }
+        let remaining = chunk;
+        while (remaining.length > 0) {
+          let matched = false;
+          for (let len = Math.min(remaining.length, 12); len >= 2; len--) {
+            const sub = remaining.slice(0, len);
+            if (KHMER_NAME_DICT[sub]) {
+              result.push(sub);
+              remaining = remaining.slice(len);
+              matched = true;
+              break;
+            }
+          }
+          if (!matched) {
+            result.push(remaining);
+            break;
+          }
+        }
+      }
+      return result;
+    }
+
+    function transliterateKhmerName(fullName) {
+      if (!fullName) return '';
+      const words = segmentKhmerName(fullName);
+      const romanized = words.map(w => transliterateKhmerWord(w)).filter(Boolean);
+      return romanized.join(' ').toUpperCase();
+    }
+
+    function convertNidaKhmerKeysToEnglish(str) {
+      let res = '';
+      for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (NIDA_KEY_MAP[ch] !== undefined) {
+          res += NIDA_KEY_MAP[ch];
+        } else if (/[a-zA-Z0-9\s\.\-]/.test(ch)) {
+          res += ch.toUpperCase();
+        }
+      }
+      return res;
+    }
+
+    // Refresh & sync Latin Name from Khmer Name
+    function syncLatinFromKhmer(showNotification = true) {
+      const nameKhmer = document.getElementById('nameKhmer');
+      const nameLatin = document.getElementById('nameLatin');
+      const khmerVal = nameKhmer ? nameKhmer.value.trim() : '';
+
+      if (!khmerVal) {
+        if (showNotification) showToast('សូមបញ្ចូលឈ្មោះជាភាសាខ្មែរជាមុនសិន!', 'error');
+        if (nameKhmer) nameKhmer.focus();
+        return;
+      }
+
+      const romanized = transliterateKhmerName(khmerVal);
+      nameLatin.value = romanized;
+      isLatinManuallyEdited = false;
+      updateLivePreview();
+
+      // Subtle pulse highlight
+      nameLatin.classList.add('ring-2', 'ring-emerald-400');
+      setTimeout(() => nameLatin.classList.remove('ring-2', 'ring-emerald-400'), 500);
+
+      if (showNotification) {
+        showToast(`បាន Refresh ឈ្មោះជាឡាតាំង៖ ${romanized}`);
+      }
+    }
+
+    // Refresh entire form (All fields, dates, communes, preview)
+    function refreshAllForm() {
+      clearFormFields();
+      const icon = document.querySelector('#btnHeaderRefresh svg');
+      if (icon) {
+        icon.classList.add('rotate-180');
+        setTimeout(() => icon.classList.remove('rotate-180'), 500);
+      }
+      showToast('បាន Refresh និងសម្អាតទម្រង់ឡើងវិញរួចរាល់!');
+      const nameKhmer = document.getElementById('nameKhmer');
+      if (nameKhmer) nameKhmer.focus();
+    }
+
+    // --- 2. INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', () => {
+      loadRecordsFromStorage();
+      bindInputListeners();
+      updateLivePreview();
+    });
+
+    // --- 3. TOAST NOTIFICATION HELPER ---
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      
+      const bgColor = type === 'error' ? 'bg-rose-900 border-rose-700 text-rose-100' :
+                      type === 'info' ? 'bg-slate-900 border-slate-700 text-slate-100' :
+                      'bg-emerald-900 border-emerald-700 text-emerald-100';
+
+      toast.className = `${bgColor} border px-4 py-3 rounded-xl shadow-xl text-xs sm:text-sm font-medium flex items-center gap-2.5 backdrop-blur-md transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto`;
+      toast.innerHTML = `
+        <span>${type === 'error' ? '⚠️' : '✅'}</span>
+        <span>${message}</span>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Animate in
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      // Auto dismiss
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // --- 4. DIGIT & DATE CONVERSION UTILS ---
+    function toKhmerDigits(numStr) {
+      return String(numStr).replace(/\d/g, d => KHMER_DIGITS[parseInt(d)]);
+    }
+
+    function toArabicDigits(str) {
+      let res = String(str);
+      KHMER_DIGITS.forEach((khDigit, idx) => {
+        res = res.split(khDigit).join(String(idx));
+      });
+      return res;
+    }
+
+    // Parse numeric date: e.g. "15/04/1995" or "1995-04-15" or "15.04.1995"
+    function parseDateString(dateStr) {
+      if (!dateStr) return null;
+      let clean = toArabicDigits(dateStr.trim());
+      
+      // Pattern 1: DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+      const dmyMatch = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+      if (dmyMatch) {
+        const day = parseInt(dmyMatch[1], 10);
+        const month = parseInt(dmyMatch[2], 10);
+        const year = parseInt(dmyMatch[3], 10);
+        if (isValidDate(day, month, year)) {
+          return { day, month, year };
+        }
+      }
+
+      // Pattern 2: YYYY-MM-DD (from datepicker)
+      const ymdMatch = clean.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+      if (ymdMatch) {
+        const year = parseInt(ymdMatch[1], 10);
+        const month = parseInt(ymdMatch[2], 10);
+        const day = parseInt(ymdMatch[3], 10);
+        if (isValidDate(day, month, year)) {
+          return { day, month, year };
+        }
+      }
+
+      return null;
+    }
+
+    function isValidDate(day, month, year) {
+      if (year < 1900 || year > 2099) return false;
+      if (month < 1 || month > 12) return false;
+      const daysInMonth = new Date(year, month, 0).getDate();
+      return day >= 1 && day <= daysInMonth;
+    }
+
+    // Convert day, month, year to Khmer format: "15 មេសា 1995"
+    function formatKhmerMonthDate(day, month, year, useKhmerDigits = false) {
+      const monthName = KHMER_MONTHS[month - 1] || '';
+      const dayPadded = String(day).padStart(2, '0');
+      if (useKhmerDigits) {
+        return `${toKhmerDigits(dayPadded)} ${monthName} ${toKhmerDigits(year)}`;
+      }
+      return `${dayPadded} ${monthName} ${year}`;
+    }
+
+    // Format to standard DD/MM/YYYY
+    function formatNumericDate(day, month, year) {
+      const dayStr = String(day).padStart(2, '0');
+      const monthStr = String(month).padStart(2, '0');
+      return `${dayStr}/${monthStr}/${year}`;
+    }
+
+    // Calculate age
+    function calculateAge(day, month, year) {
+      const today = new Date();
+      let age = today.getFullYear() - year;
+      const m = (today.getMonth() + 1) - month;
+      if (m < 0 || (m === 0 && today.getDate() < day)) {
+        age--;
+      }
+      return age >= 0 ? age : 0;
+    }
+
+    // --- 5. EVENT HANDLERS & TWO-WAY SYNC ---
+    function bindInputListeners() {
+      const dobNumeric = document.getElementById('dobNumeric');
+      const dobKhmer = document.getElementById('dobKhmer');
+
+      // 1. Numeric Date Input Masking & Auto Sync to Khmer Date
+      dobNumeric.addEventListener('input', (e) => {
+        let val = e.target.value;
+        
+        // Auto-slash formatting helper if user types digits
+        const digitsOnly = toArabicDigits(val).replace(/\D/g, '');
+        if (digitsOnly.length === 8 && !val.includes('/')) {
+          val = `${digitsOnly.slice(0, 2)}/${digitsOnly.slice(2, 4)}/${digitsOnly.slice(4, 8)}`;
+          dobNumeric.value = val;
+        }
+
+        const parsed = parseDateString(val);
+        if (parsed) {
+          const khmerFormatted = formatKhmerMonthDate(parsed.day, parsed.month, parsed.year, useKhmerDigitsInKhmerDob);
+          dobKhmer.value = khmerFormatted;
+          updateAgeDisplay(parsed.day, parsed.month, parsed.year);
+        } else {
+          document.getElementById('calculatedAgeBadge').classList.add('hidden');
+        }
+        updateLivePreview();
+      });
+
+      // 2. Khmer Date Input Parsing & Auto Sync to Numeric Date
+      dobKhmer.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        parseAndSyncKhmerText(val);
+        updateLivePreview();
+      });
+
+      const nameKhmer = document.getElementById('nameKhmer');
+      const nameLatin = document.getElementById('nameLatin');
+
+      // Auto-transliterate when typing in Khmer Name (input, change, blur)
+      ['input', 'change', 'blur'].forEach(evt => {
+        nameKhmer.addEventListener(evt, () => {
+          const khmerVal = nameKhmer.value.trim();
+          if (khmerVal && (!isLatinManuallyEdited || nameLatin.value.trim() === '')) {
+            const romanized = transliterateKhmerName(khmerVal);
+            nameLatin.value = romanized;
+          }
+          updateLivePreview();
+        });
+      });
+
+      // Auto-transliterate whenever cursor is placed into Latin Name (focus or click)
+      const handleLatinFocusOrClick = () => {
+        const khmerVal = nameKhmer.value.trim();
+        if (khmerVal) {
+          if (!isLatinManuallyEdited || nameLatin.value.trim() === '') {
+            nameLatin.value = transliterateKhmerName(khmerVal);
+            isLatinManuallyEdited = false;
+            updateLivePreview();
+          }
+        }
+      };
+      nameLatin.addEventListener('focus', handleLatinFocusOrClick);
+      nameLatin.addEventListener('click', handleLatinFocusOrClick);
+
+      // Handle typing in Latin Name (Auto-converts NiDA keyboard / Khmer Unicode keys to English uppercase)
+      nameLatin.addEventListener('input', (e) => {
+        let val = e.target.value;
+        isLatinManuallyEdited = true;
+
+        // If Khmer characters detected (e.g. user typed on Windows Khmer NiDA keyboard)
+        if (/[\u1780-\u17FF]/.test(val)) {
+          // Check if user entered a known Khmer name word
+          const transliterated = transliterateKhmerName(val);
+          if (transliterated && transliterated !== val.toUpperCase()) {
+            val = transliterated;
+          } else {
+            // Map NiDA keyboard keystrokes to English
+            val = convertNidaKhmerKeysToEnglish(val);
+          }
+        }
+
+        // Always enforce uppercase
+        val = val.toUpperCase();
+        nameLatin.value = val;
+        updateLivePreview();
+      });
+
+      // Village input update live preview
+      const villageInput = document.getElementById('villageInput');
+      if (villageInput) villageInput.addEventListener('input', updateLivePreview);
+
+      document.querySelectorAll('input[name="gender"]').forEach(radio => {
+        radio.addEventListener('change', updateLivePreview);
+      });
+
+      // Quick Demo button
+      document.getElementById('btnDemoData').addEventListener('click', fillDemoData);
+    }
+
+    // Handler when native calendar date is picked
+    function handleDatePickerChange(pickerValue) {
+      if (!pickerValue) return;
+      const parsed = parseDateString(pickerValue);
+      if (parsed) {
+        const numericStr = formatNumericDate(parsed.day, parsed.month, parsed.year);
+        const khmerStr = formatKhmerMonthDate(parsed.day, parsed.month, parsed.year, useKhmerDigitsInKhmerDob);
+        
+        document.getElementById('dobNumeric').value = numericStr;
+        document.getElementById('dobKhmer').value = khmerStr;
+        updateAgeDisplay(parsed.day, parsed.month, parsed.year);
+        updateLivePreview();
+        showToast(`បានជ្រើសរើសថ្ងៃកំណើត៖ ${khmerStr}`, 'info');
+      }
+    }
+
+    // Parse user-typed Khmer date: e.g. "15 មេសា 1995"
+    function parseAndSyncKhmerText(khmerStr) {
+      if (!khmerStr) return;
+      
+      // Look for Khmer month name
+      let foundMonthIdx = -1;
+      KHMER_MONTHS.forEach((m, idx) => {
+        if (khmerStr.includes(m)) {
+          foundMonthIdx = idx + 1;
+        }
+      });
+
+      if (foundMonthIdx > 0) {
+        const normalized = toArabicDigits(khmerStr);
+        const numbers = normalized.match(/\d+/g);
+        if (numbers && numbers.length >= 2) {
+          const day = parseInt(numbers[0], 10);
+          const year = parseInt(numbers[numbers.length - 1], 10);
+          if (isValidDate(day, foundMonthIdx, year)) {
+            const numericFormatted = formatNumericDate(day, foundMonthIdx, year);
+            document.getElementById('dobNumeric').value = numericFormatted;
+            updateAgeDisplay(day, foundMonthIdx, year);
+          }
+        }
+      }
+    }
+
+    // Toggle between Arabic numerals and Khmer numerals for Khmer date
+    function toggleKhmerDigitsFormat() {
+      useKhmerDigitsInKhmerDob = !useKhmerDigitsInKhmerDob;
+      const btn = document.getElementById('toggleKhmerDigitsBtn');
+      const dobNumericVal = document.getElementById('dobNumeric').value;
+      const parsed = parseDateString(dobNumericVal);
+
+      if (useKhmerDigitsInKhmerDob) {
+        btn.textContent = 'ប្តូរជាលេខអារ៉ាប់ (15 មេសា 1995)';
+        if (parsed) {
+          document.getElementById('dobKhmer').value = formatKhmerMonthDate(parsed.day, parsed.month, parsed.year, true);
+        }
+      } else {
+        btn.textContent = 'ប្តូរជាលេខខ្មែរ (១៥ មេសា ១៩៩៥)';
+        if (parsed) {
+          document.getElementById('dobKhmer').value = formatKhmerMonthDate(parsed.day, parsed.month, parsed.year, false);
+        }
+      }
+      updateLivePreview();
+    }
+
+    function updateAgeDisplay(day, month, year) {
+      const age = calculateAge(day, month, year);
+      const ageBadge = document.getElementById('calculatedAgeBadge');
+      ageBadge.textContent = `អាយុ៖ ${age} ឆ្នាំ`;
+      ageBadge.classList.remove('hidden');
+    }
+
+    // Convert Latin name to uppercase
+    function transformLatinToUpper() {
+      const latinInput = document.getElementById('nameLatin');
+      latinInput.value = latinInput.value.toUpperCase();
+      updateLivePreview();
+    }
+
+    // --- 6. COMMUNE & VILLAGE SELECTION ---
+    function handleCommuneChange(communeName) {
+      const villageList = document.getElementById('villageList');
+      const villagePillsContainer = document.getElementById('villagePillsContainer');
+      const villageInput = document.getElementById('villageInput');
+      const villageCountLabel = document.getElementById('villageCountLabel');
+
+      villageList.innerHTML = '';
+      villagePillsContainer.innerHTML = '';
+      villageInput.value = '';
+
+      const villages = SREI_SNAM_DATA.communes[communeName] || [];
+      villageCountLabel.textContent = `មាន ${villages.length} ភូមិផ្លូវការ`;
+
+      villages.forEach(v => {
+        // Add to datalist
+        const option = document.createElement('option');
+        option.value = v;
+        villageList.appendChild(option);
+
+        // Add clickable pill badge
+        const pill = document.createElement('button');
+        pill.type = 'button';
+        pill.className = 'text-[11px] bg-slate-100 hover:bg-emerald-100 hover:text-emerald-800 text-slate-700 font-medium px-2.5 py-1 rounded-lg border border-slate-200 transition';
+        pill.textContent = v;
+        pill.onclick = () => {
+          villageInput.value = v;
+          updateLivePreview();
+        };
+        villagePillsContainer.appendChild(pill);
+      });
+
+      updateLivePreview();
+    }
+
+    // --- 7. LIVE PREVIEW UPDATE ---
+    function updateLivePreview() {
+      const nameKhmer = document.getElementById('nameKhmer').value.trim() || '-- ឈ្មោះជាភាសាខ្មែរ --';
+      const nameLatin = document.getElementById('nameLatin').value.trim() || '-- NAME IN LATIN --';
+      
+      const genderRadio = document.querySelector('input[name="gender"]:checked');
+      const gender = genderRadio ? genderRadio.value : 'ស្រី';
+
+      const dobNumeric = document.getElementById('dobNumeric').value.trim() || '--/--/----';
+      const dobKhmer = document.getElementById('dobKhmer').value.trim() || '-- -- ----';
+
+      const commune = document.getElementById('commune').value || '--';
+      const village = document.getElementById('villageInput').value.trim() || '--';
+
+      // Update text in preview card
+      document.getElementById('previewNameKhmer').textContent = nameKhmer;
+      document.getElementById('previewNameLatin').textContent = nameLatin;
+      document.getElementById('previewGender').textContent = `ភេទ៖ ${gender}`;
+      document.getElementById('previewAvatar').textContent = gender === 'ប្រុស' ? '👨' : (gender === 'ស្រី' ? '👩' : '✨');
+
+      document.getElementById('previewDobNumeric').textContent = dobNumeric;
+      document.getElementById('previewDobKhmer').textContent = dobKhmer;
+      
+      const addressStr = `ភូមិ${village} ឃុំ${commune} ស្រុកស្រីស្នំ ខេត្តសៀមរាប`;
+      document.getElementById('previewAddress').textContent = addressStr;
+
+      // Age in preview
+      const parsed = parseDateString(dobNumeric);
+      if (parsed) {
+        const age = calculateAge(parsed.day, parsed.month, parsed.year);
+        document.getElementById('previewAge').textContent = `អាយុ៖ ${age} ឆ្នាំ`;
+      } else {
+        document.getElementById('previewAge').textContent = 'អាយុ៖ --';
+      }
+
+      document.getElementById('previewCreatedAt').textContent = new Date().toLocaleDateString('km-KH');
+    }
+
+    // Copy live preview summary
+    function copyPreviewText() {
+      const nameKhmer = document.getElementById('nameKhmer').value.trim();
+      const nameLatin = document.getElementById('nameLatin').value.trim();
+      const gender = document.querySelector('input[name="gender"]:checked')?.value || '';
+      const dobNumeric = document.getElementById('dobNumeric').value.trim();
+      const dobKhmer = document.getElementById('dobKhmer').value.trim();
+      const commune = document.getElementById('commune').value;
+      const village = document.getElementById('villageInput').value.trim();
+
+      const text = `📋 ព័ត៌មានបុគ្គល (ស្រុកស្រីស្នំ ខេត្តសៀមរាប)
+- ឈ្មោះជាភាសាខ្មែរ៖ ${nameKhmer || 'N/A'}
+- ឈ្មោះជាភាសាឡាតាំង៖ ${nameLatin || 'N/A'}
+- ភេទ៖ ${gender}
+- ថ្ងៃខែឆ្នាំកំណើត (លេខ)៖ ${dobNumeric || 'N/A'}
+- ថ្ងៃខែឆ្នាំកំណើត (ខែខ្មែរ)៖ ${dobKhmer || 'N/A'}
+- អាសយដ្ឋាន៖ ភូមិ${village || 'N/A'}, ឃុំ${commune || 'N/A'}, ស្រុកស្រីស្នំ, ខេត្តសៀមរាប`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('បានចម្លងព័ត៌មានរួចរាល់! អាចបិទភ្ជាប់ (Paste) ផ្ញើបានភ្លាមៗ។');
+      });
+    }
+
+    // Fill sample demo data
+    function fillDemoData() {
+      document.getElementById('nameKhmer').value = 'ស៊ុន ចាន់ថន';
+      document.getElementById('nameLatin').value = 'SUN CHANTHORN';
+      
+      const femaleRadio = document.querySelector('input[name="gender"][value="ស្រី"]');
+      if (femaleRadio) femaleRadio.checked = true;
+
+      document.getElementById('dobNumeric').value = '15/04/1995';
+      document.getElementById('dobKhmer').value = '15 មេសា 1995';
+      updateAgeDisplay(15, 4, 1995);
+
+      const communeSelect = document.getElementById('commune');
+      communeSelect.value = 'ជ្រោយនាងងួន';
+      handleCommuneChange('ជ្រោយនាងងួន');
+
+      document.getElementById('villageInput').value = 'ជ្រោយនាងងួន';
+
+      updateLivePreview();
+      showToast('បានបញ្ចូលទិន្នន័យគំរូដោយជោគជ័យ!', 'info');
+    }
+
+    // Clear Form Fields Helper
+    function clearFormFields() {
+      document.getElementById('registrationForm').reset();
+      document.getElementById('commune').value = '';
+      document.getElementById('villageInput').value = '';
+      document.getElementById('villageList').innerHTML = '';
+      document.getElementById('villagePillsContainer').innerHTML = '';
+      document.getElementById('villageCountLabel').textContent = 'ជ្រើសរើសឃុំជាមុន';
+      document.getElementById('calculatedAgeBadge').classList.add('hidden');
+      const dobPicker = document.getElementById('dobPicker');
+      if (dobPicker) dobPicker.value = '';
+      
+      const defaultGender = document.querySelector('input[name="gender"][value="ស្រី"]');
+      if (defaultGender) defaultGender.checked = true;
+
+      isLatinManuallyEdited = false;
+      updateLivePreview();
+    }
+
+    // Reset Form (User clicked reset button)
+    function resetForm() {
+      clearFormFields();
+      showToast('បានកំណត់ទម្រង់ឡើងវិញរួចរាល់');
+    }
+
+    // --- 8. SUBMISSION & LOCALSTORAGE ---
+    function handleFormSubmit() {
+      const nameKhmer = document.getElementById('nameKhmer').value.trim();
+      const nameLatin = document.getElementById('nameLatin').value.trim().toUpperCase();
+      const gender = document.querySelector('input[name="gender"]:checked')?.value || 'ស្រី';
+      const dobNumeric = document.getElementById('dobNumeric').value.trim();
+      const dobKhmer = document.getElementById('dobKhmer').value.trim();
+      const commune = document.getElementById('commune').value;
+      const village = document.getElementById('villageInput').value.trim();
+
+      if (!nameKhmer || !nameLatin || !dobNumeric || !commune || !village) {
+        showToast('សូមបំពេញព័ត៌មានដែលចាំបាច់ទាំងអស់!', 'error');
+        return;
+      }
+
+      // Check date validity
+      const parsed = parseDateString(dobNumeric);
+      if (!parsed) {
+        showToast('ទម្រង់ថ្ងៃខែឆ្នាំកំណើតមិនត្រឹមត្រូវទេ (ឧ. 15/04/1995)!', 'error');
+        return;
+      }
+
+      const age = calculateAge(parsed.day, parsed.month, parsed.year);
+
+      const record = {
+        id: 'rec_' + Date.now(),
+        nameKhmer,
+        nameLatin,
+        gender,
+        dobNumeric,
+        dobKhmer,
+        age,
+        province: 'សៀមរាប',
+        district: 'ស្រីស្នំ',
+        commune,
+        village,
+        createdAt: new Date().toLocaleString('km-KH')
+      };
+
+      savedRecords.unshift(record);
+      saveRecordsToStorage();
+      renderRecordsTable();
+      updateSavedCountBadges();
+
+      showToast(`បានរក្សាទុកទិន្នន័យរបស់ "${nameKhmer}" ដោយជោគជ័យ!`);
+      
+      // សម្អាត Form ដោយស្វ័យប្រវត្តបន្ទាប់ពីរៀបចំរក្សាទុករួច
+      clearFormFields();
+
+      // Focus ទៅលើប្រអប់ឈ្មោះភាសាខ្មែរវិញ ដើម្បីងាយស្រួលវាយបញ្ចូលអ្នកបន្ទាប់
+      setTimeout(() => {
+        const nameInput = document.getElementById('nameKhmer');
+        if (nameInput) nameInput.focus();
+      }, 100);
+    }
+
+    function saveRecordsToStorage() {
+      localStorage.setItem('srei_snam_members_data', JSON.stringify(savedRecords));
+    }
+
+    function loadRecordsFromStorage() {
+      try {
+        const stored = localStorage.getItem('srei_snam_members_data');
+        if (stored) {
+          savedRecords = JSON.parse(stored);
+        } else {
+          // Add default seed records for pleasant first run
+          savedRecords = [
+            {
+              id: 'rec_01',
+              nameKhmer: 'សុខ សំណាង',
+              nameLatin: 'SOK SAMNANG',
+              gender: 'ប្រុស',
+              dobNumeric: '15/04/1995',
+              dobKhmer: '15 មេសា 1995',
+              age: 31,
+              province: 'សៀមរាប',
+              district: 'ស្រីស្នំ',
+              commune: 'ជ្រោយនាងងួន',
+              village: 'ជ្រោយនាងងួន',
+              createdAt: '15/04/2026'
+            },
+            {
+              id: 'rec_02',
+              nameKhmer: 'គង់ ស្រីមុំ',
+              nameLatin: 'KONG SREYMOM',
+              gender: 'ស្រី',
+              dobNumeric: '20/11/1998',
+              dobKhmer: '20 វិច្ឆិកា 1998',
+              age: 28,
+              province: 'សៀមរាប',
+              district: 'ស្រីស្នំ',
+              commune: 'ស្លែងស្ពាន',
+              village: 'ដំណាក់ដំរី',
+              createdAt: '18/04/2026'
+            }
+          ];
+          saveRecordsToStorage();
+        }
+      } catch (e) {
+        console.error('Storage read error', e);
+        savedRecords = [];
+      }
+      renderRecordsTable();
+      updateSavedCountBadges();
+    }
+
+    function updateSavedCountBadges() {
+      const count = savedRecords.length;
+      document.getElementById('savedCountBadge').textContent = count;
+      document.getElementById('tableCountBadge').textContent = `${count} នាក់`;
+    }
+
+    // Render Table
+    function renderRecordsTable(recordsToRender = savedRecords) {
+      const tbody = document.getElementById('recordsTableBody');
+      const emptyState = document.getElementById('tableEmptyState');
+      tbody.innerHTML = '';
+
+      if (recordsToRender.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      recordsToRender.forEach((item, index) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50/80 transition-colors';
+
+        tr.innerHTML = `
+          <td class="py-3 px-3 font-semibold text-slate-500">${index + 1}</td>
+          <td class="py-3 px-3 font-bold text-slate-800">${item.nameKhmer}</td>
+          <td class="py-3 px-3 font-semibold text-emerald-700 tracking-wide">${item.nameLatin}</td>
+          <td class="py-3 px-3">
+            <span class="px-2 py-0.5 rounded text-[11px] font-medium ${item.gender === 'ស្រី' ? 'bg-pink-100 text-pink-700 border border-pink-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}">
+              ${item.gender}
+            </span>
+          </td>
+          <td class="py-3 px-3 font-medium text-slate-600">${item.dobNumeric}</td>
+          <td class="py-3 px-3 font-medium text-slate-800">${item.dobKhmer}</td>
+          <td class="py-3 px-3 text-slate-700">ឃុំ${item.commune}</td>
+          <td class="py-3 px-3 text-slate-700">ភូមិ${item.village}</td>
+          <td class="py-3 px-3 text-center">
+            <div class="flex items-center justify-center gap-1.5">
+              <button
+                type="button"
+                onclick="loadRecordIntoForm('${item.id}')"
+                class="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition"
+                title="ផ្ទុកឡើងក្នុងទម្រង់"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                </svg>
+              </button>
+
+              <button
+                type="button"
+                onclick="deleteRecord('${item.id}')"
+                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                title="លុប"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+              </button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Search records
+    function handleSearchRecords(query) {
+      const q = query.toLowerCase().trim();
+      if (!q) {
+        renderRecordsTable(savedRecords);
+        return;
+      }
+      const filtered = savedRecords.filter(item => 
+        item.nameKhmer.toLowerCase().includes(q) ||
+        item.nameLatin.toLowerCase().includes(q) ||
+        item.commune.toLowerCase().includes(q) ||
+        item.village.toLowerCase().includes(q) ||
+        item.dobNumeric.includes(q) ||
+        item.dobKhmer.toLowerCase().includes(q)
+      );
+      renderRecordsTable(filtered);
+    }
+
+    // Load record back into form
+    function loadRecordIntoForm(recordId) {
+      const rec = savedRecords.find(r => r.id === recordId);
+      if (!rec) return;
+
+      document.getElementById('nameKhmer').value = rec.nameKhmer;
+      document.getElementById('nameLatin').value = rec.nameLatin;
+      isLatinManuallyEdited = true;
+
+      const radio = document.querySelector(`input[name="gender"][value="${rec.gender}"]`);
+      if (radio) radio.checked = true;
+
+      document.getElementById('dobNumeric').value = rec.dobNumeric;
+      document.getElementById('dobKhmer').value = rec.dobKhmer;
+
+      const communeSelect = document.getElementById('commune');
+      communeSelect.value = rec.commune;
+      handleCommuneChange(rec.commune);
+
+      document.getElementById('villageInput').value = rec.village;
+
+      const parsed = parseDateString(rec.dobNumeric);
+      if (parsed) updateAgeDisplay(parsed.day, parsed.month, parsed.year);
+
+      updateLivePreview();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      showToast(`បានផ្ទុកទិន្នន័យរបស់ "${rec.nameKhmer}" ចូលក្នុងទម្រង់`, 'info');
+    }
+
+    // Delete single record
+    function deleteRecord(recordId) {
+      if (!confirm('តើអ្នកពិតជាចង់លុបទិន្នន័យនេះមែនទេ?')) return;
+      savedRecords = savedRecords.filter(r => r.id !== recordId);
+      saveRecordsToStorage();
+      renderRecordsTable();
+      updateSavedCountBadges();
+      showToast('បានលុបទិន្នន័យរួចរាល់', 'info');
+    }
+
+    // Clear all records
+    function clearAllRecords() {
+      if (savedRecords.length === 0) return;
+      if (!confirm('តើអ្នកពិតជាចង់សម្អាតទិន្នន័យទាំងអស់មែនទេ?')) return;
+      savedRecords = [];
+      saveRecordsToStorage();
+      renderRecordsTable();
+      updateSavedCountBadges();
+      showToast('បានសម្អាតទិន្នន័យទាំងអស់រួចរាល់');
+    }
+
+    // --- 9. EXCEL EXPORT (XLSX) ---
+    function exportToExcel() {
+      if (savedRecords.length === 0) {
+        showToast('មិនមានទិន្នន័យសម្រាប់នាំចេញទេ!', 'error');
+        return;
+      }
+
+      // Format data for Excel worksheet with clear Khmer headers
+      const worksheetData = savedRecords.map((r, i) => ({
+        'ល.រ': i + 1,
+        'ឈ្មោះជាភាសាខ្មែរ': r.nameKhmer,
+        'ឈ្មោះជាភាសាឡាតាំង': r.nameLatin,
+        'ភេទ': r.gender,
+        'ថ្ងៃខែឆ្នាំកំណើត (លេខ)': r.dobNumeric,
+        'ថ្ងៃខែឆ្នាំកំណើត (ខែខ្មែរ)': r.dobKhmer,
+        'អាយុ': r.age,
+        'ខេត្ត': r.province,
+        'ស្រុក': r.district,
+        'ឃុំ': r.commune,
+        'ភូមិ': r.village,
+        'កាលបរិច្ឆេទបញ្ចូល': r.createdAt
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+
+      // Auto column widths
+      const colWidths = [
+        { wch: 6 },  // No
+        { wch: 22 }, // Name Kh
+        { wch: 22 }, // Name En
+        { wch: 10 }, // Gender
+        { wch: 18 }, // DOB Num
+        { wch: 22 }, // DOB Kh
+        { wch: 8 },  // Age
+        { wch: 14 }, // Province
+        { wch: 14 }, // District
+        { wch: 18 }, // Commune
+        { wch: 18 }, // Village
+        { wch: 20 }, // CreatedAt
+      ];
+      worksheet['!cols'] = colWidths;
+
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'បញ្ជីព័ត៌មានបុគ្គល');
+
+      const fileName = `បញ្ជីព័ត៌មាន_ស្រុកស្រីស្នំ_${new Date().toISOString().slice(0, 10)}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      showToast(`បានទាញយកឯកសារ Excel: ${fileName} ដោយជោគជ័យ!`);
+    }
+  </script>
+</body>
+</html>
